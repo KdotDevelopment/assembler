@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
     prog_header.p_offset = 0x0;  // Segment starts at file start
     prog_header.p_vaddr = 0x400000;   // Virtual address (typical base for executables)
     prog_header.p_paddr = 0x400000;   // Physical address (same for executable)
-    prog_header.p_filesz = 176;//sizeof(elf_header) + sizeof(prog_header) + sizeof(machine_code); // File size
-    prog_header.p_memsz = 176;//sizeof(elf_header) + sizeof(prog_header) + sizeof(machine_code); // Memory size
+    prog_header.p_filesz = sizeof(elf_header) + 2 * sizeof(prog_header); // File size
+    prog_header.p_memsz = sizeof(elf_header) + 2 * sizeof(prog_header); // Memory size
     prog_header.p_align = 0x1000;
 
     program_header_t prog_header2;
@@ -79,11 +79,9 @@ int main(int argc, char *argv[]) {
     prog_header2.p_offset = 0x1000;
     prog_header2.p_vaddr = 0x401000;   // Virtual address (typical base for executables)
     prog_header2.p_paddr = 0x401000;   // Physical address (same for executable)
-    prog_header2.p_filesz = 20;//sizeof(elf_header) + sizeof(prog_header) + sizeof(machine_code); // File size
-    prog_header2.p_memsz = 20;//sizeof(elf_header) + sizeof(prog_header) + sizeof(machine_code); // Memory size
+    prog_header2.p_filesz = sizeof(machine_code); // File size
+    prog_header2.p_memsz = sizeof(machine_code); // Memory size
     prog_header2.p_align = 0x0;
-
-	//printf("%ld\n", sizeof(header_t));
 
     // Write the ELF header
     fwrite(&elf_header, sizeof(elf_header), 1, lexer.out_file);

@@ -2,18 +2,27 @@
 
 #include "lex.h"
 
+#include <stdint.h>
+
+#define OP_REGISTER 0x01
+#define OP_INTLIT 0x02
+#define OP_MEMORY 0x04
+#define OP_INVALID 0x08
+
+typedef struct operand_t {
+    uint8_t flags;
+    union {
+        int reg;
+        int intlit;
+    };
+    int64_t mem_offset; // -X[reg] (includes -)
+} operand_t;
+
 //this is basically every line of code
 typedef struct instruction_t {
     int opcode; //uses keywords from lex.h
-    union {
-        int reg;
-        int intlit;
-    } arg_1;
-    
-    union {
-        int reg;
-        int intlit;
-    } arg_2;
+    operand_t operand_1;
+    operand_t operand_2;
 } instruction_t;
 
 typedef struct parser_t {
