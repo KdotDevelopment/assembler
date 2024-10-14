@@ -1,0 +1,204 @@
+#include "lex.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+int chr_pos(char *s, int c) {
+	char *p;
+
+	p = strchr(s, c);
+	return (p ? p - s : -1);
+}
+
+int get_next_char(lexer_t *lexer) {
+	int c;
+	
+	c = fgetc(lexer->in_file);
+	//if(c == '\n') lexer->line_num++;
+	return c;
+}
+
+int skip_char(lexer_t *lexer) {
+	int c;
+
+	c = get_next_char(lexer);
+	while(c == ' ' || c == '\t' || c == '\r' || c == '\f') c = get_next_char(lexer); // skips over stuff that doesn't matter
+	//ungetc(c, lexer->in_file);
+
+	return c;
+}
+
+int64_t scan_int(lexer_t *lexer) {
+	int k, val = 0;
+
+	while((k = chr_pos("0123456789", lexer->character)) >= 0) {
+		val = val * 10 + k;
+		lexer->character = get_next_char(lexer);
+	}
+
+	ungetc(lexer->character, lexer->in_file);
+	return val;
+}
+
+int scan_ident(lexer_t *lexer, token_t *token) {
+	size_t index = 1;
+
+	token->ident_value[0] = lexer->character; //we already know the first one is an ident
+
+	while(isalpha(lexer->character) || isdigit(lexer->character) || lexer->character == '_') {
+		if(index > MAX_IDENT_LENGTH - 1) {
+			token->ident_value[index] = 0;
+			printf("Indentifier %s on line %ld is over %d characters\n", token->ident_value, lexer->line_num, MAX_IDENT_LENGTH);
+			exit(1);
+		}
+		//printf("%c", lexer->character);
+		lexer->character = get_next_char(lexer);
+		token->ident_value[index] = (char)lexer->character;
+		index++;
+	}
+	token->ident_value[index - 1] = 0;
+
+	ungetc(lexer->character, lexer->in_file);
+	return 1;
+}
+
+void get_keyword(token_t *token) { //takes the ident string and converts it to a keyword if applicable
+	if(token->token != T_IDENT) return;
+	if(!strcmp(token->ident_value, "r8")) token->keyword = K_R8;
+	else if(!strcmp(token->ident_value, "r9")) token->keyword = K_R9;
+	else if(!strcmp(token->ident_value, "r10")) token->keyword = K_R10;
+    else if(!strcmp(token->ident_value, "r11")) token->keyword = K_R11;
+    else if(!strcmp(token->ident_value, "r8d")) token->keyword = K_R8D;
+    else if(!strcmp(token->ident_value, "r9d")) token->keyword = K_R9D;
+    else if(!strcmp(token->ident_value, "r10d")) token->keyword = K_R10D;
+    else if(!strcmp(token->ident_value, "r11d")) token->keyword = K_R11D;
+    else if(!strcmp(token->ident_value, "r8b")) token->keyword = K_R8B;
+    else if(!strcmp(token->ident_value, "r9b")) token->keyword = K_R9B;
+    else if(!strcmp(token->ident_value, "r10b")) token->keyword = K_R10B;
+    else if(!strcmp(token->ident_value, "r11b")) token->keyword = K_R11B;
+    else if(!strcmp(token->ident_value, "r8w")) token->keyword = K_R8W;
+    else if(!strcmp(token->ident_value, "r9w")) token->keyword = K_R9W;
+    else if(!strcmp(token->ident_value, "r10w")) token->keyword = K_R10W;
+    else if(!strcmp(token->ident_value, "r11w")) token->keyword = K_R11W;
+    else if(!strcmp(token->ident_value, "rax")) token->keyword = K_RAX;
+    else if(!strcmp(token->ident_value, "rbx")) token->keyword = K_RBX;
+    else if(!strcmp(token->ident_value, "rcx")) token->keyword = K_RCX;
+    else if(!strcmp(token->ident_value, "rdx")) token->keyword = K_RDX;
+    else if(!strcmp(token->ident_value, "rsp")) token->keyword = K_RSP;
+    else if(!strcmp(token->ident_value, "rbp")) token->keyword = K_RBP;
+    else if(!strcmp(token->ident_value, "rdi")) token->keyword = K_RDI;
+    else if(!strcmp(token->ident_value, "al")) token->keyword = K_AL;
+    else if(!strcmp(token->ident_value, "mov")) token->keyword = K_MOV;
+    else if(!strcmp(token->ident_value, "add")) token->keyword = K_ADD;
+    else if(!strcmp(token->ident_value, "sub")) token->keyword = K_SUB;
+    else if(!strcmp(token->ident_value, "mul")) token->keyword = K_MUL;
+    else if(!strcmp(token->ident_value, "div")) token->keyword = K_DIV;
+    else if(!strcmp(token->ident_value, "cmp")) token->keyword = K_CMP;
+    else if(!strcmp(token->ident_value, "setz")) token->keyword = K_SETZ;
+    else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
+    else if(!strcmp(token->ident_value, "setne")) token->keyword = K_SETNE;
+    else if(!strcmp(token->ident_value, "setl")) token->keyword = K_SETL;
+    else if(!strcmp(token->ident_value, "setle")) token->keyword = K_SETLE;
+    else if(!strcmp(token->ident_value, "setg")) token->keyword = K_SETG;
+    else if(!strcmp(token->ident_value, "setge")) token->keyword = K_SETGE;
+    else if(!strcmp(token->ident_value, "call")) token->keyword = K_CALL;
+    else if(!strcmp(token->ident_value, "push")) token->keyword = K_PUSH;
+    else if(!strcmp(token->ident_value, "pop")) token->keyword = K_POP;
+    else if(!strcmp(token->ident_value, "ret")) token->keyword = K_RET;
+    else if(!strcmp(token->ident_value, "syscall")) token->keyword = K_SYSCALL;
+    else if(!strcmp(token->ident_value, "BYTE")) token->keyword = K_BYTE;
+    else if(!strcmp(token->ident_value, "WORD")) token->keyword = K_WORD;
+    else if(!strcmp(token->ident_value, "DWORD")) token->keyword = K_DWORD;
+    else if(!strcmp(token->ident_value, "QWORD")) token->keyword = K_QWORD;
+
+	else token->keyword = K_IDENT; //Must be a user defined variable name
+}
+
+token_t scan(lexer_t *lexer) {
+	lexer->character = skip_char(lexer); //this will also go to the next character automagically
+	token_t token;
+	memset(token.ident_value, 0, MAX_IDENT_LENGTH);
+	token.int_value = -1;
+	char next_char;
+	switch(lexer->character) {
+		case -1:
+			token.token = T_EOF;
+			break;
+        case '\n':
+            lexer->line_num++;
+            token.token = T_NEWLINE;
+            break;
+		case '-':
+			token.token = T_MINUS;
+			break;
+        case '.':
+			token.token = T_PERIOD;
+			break;
+        case '[':
+            token.token = T_LBRACKET;
+            break;
+        case ']':
+            token.token = T_RBRACKET;
+            break;
+		case ',':
+			token.token = T_COMMA;
+			break;
+        case ':':
+			token.token = T_COLON;
+			break;
+		default:
+			if(isdigit(lexer->character)) {
+				token.int_value = scan_int(lexer);
+				token.token = T_INTLIT;
+				break;
+			}
+			if(isalpha(lexer->character) || lexer->character == '_') {
+				scan_ident(lexer, &token);
+				token.token = T_IDENT;
+				break;
+			}
+
+			printf("Unrecognized character \'%c\' on line %ld\n", lexer->character, lexer->line_num);
+			exit(1);
+	}
+	token.keyword = -1;
+	get_keyword(&token);
+	token.line_num = lexer->line_num;
+	return token; //successful
+}
+
+void clean_tokens(lexer_t *lexer) {
+	for(int i = 0; i < lexer->token_count; i++) {
+		free(lexer->tokens[i]);
+	}
+}
+
+void lex(lexer_t *lexer) {
+    size_t max_token_count = 128;
+	lexer->line_num = 1;
+	lexer->tokens = (token_t **)malloc(max_token_count * sizeof(token_t *));
+
+	token_t current_token;
+	lexer->token_index = 0;
+	while(current_token.token != T_EOF) {
+		if(lexer->token_index > max_token_count) {
+			max_token_count *= 2;
+			lexer->tokens = (token_t **)realloc(lexer->tokens, max_token_count * sizeof(token_t *));
+		}
+		lexer->token_count = max_token_count;
+
+		token_t *permenant_token = malloc(sizeof(token_t));
+
+		current_token = scan(lexer);
+		strcpy(permenant_token->ident_value, current_token.ident_value);
+		permenant_token->int_value = current_token.int_value;
+		permenant_token->keyword = current_token.keyword;
+		permenant_token->token = current_token.token;
+		permenant_token->line_num = current_token.line_num;
+
+		lexer->tokens[lexer->token_index++] = permenant_token;
+		//printf("%d - %d . %d - %s :: %d\n", current_token.token, current_token.keyword, current_token.int_value, current_token.ident_value, current_token.line_num);
+	}
+}
