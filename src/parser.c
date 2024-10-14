@@ -78,10 +78,10 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 
 	if((operand = memory_operand(parser)).flags != OP_INVALID) {
 		if(!flag_memory) {
-			printf("Invalid memory operand \"%s\" and opcode combination on line %d\n", token->ident_value, token->line_num);
+			printf("Invalid memory operand and opcode combination on line %d\n", token->line_num);
 			exit(1);
 		}
-	}else if(token->keyword >= K_R8 && token->keyword <= K_AL) {
+	}else if(token->keyword >= K_RAX && token->keyword <= K_R15B) {
 		if(!flag_register) {
 			printf("Invalid register operand \"%s\" and opcode combination on line %d\n", token->ident_value, token->line_num);
 			exit(1);
@@ -90,7 +90,7 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 		operand.flags = OP_REGISTER;
 	}else if(token->token == T_INTLIT) {
 		if(!flag_intlit) {
-			printf("Invalid intlit operand \"%s\" and opcode combination on line %d\n", token->ident_value, token->line_num);
+			printf("Invalid intlit operand %d and opcode combination on line %d\n", token->int_value, token->line_num);
 			exit(1);
 		}
 		operand.intlit = token->int_value;
@@ -208,6 +208,9 @@ void parse(parser_t *parser) {
 		parser->instructions[parser->instruction_index++] = permenant_instruction;
 
 		if(parser->lexer->tokens[parser->pos]->token == T_EOF) continue;
+		if(parser->lexer->tokens[parser->pos]->token == T_SEMICOLON) {
+			while(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) parser->pos++;
+		}
 		require_newline(parser);
 	}
 }

@@ -15,7 +15,7 @@ typedef struct operand_t {
         int reg;
         int intlit;
     };
-    int64_t mem_offset; // -X[reg] (includes -)
+    int64_t mem_offset; // -X[reg] (includes sign)
 } operand_t;
 
 //this is basically every line of code

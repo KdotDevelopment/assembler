@@ -31,6 +31,7 @@ enum {
     T_RBRACKET,
     T_COMMA,
     T_COLON,
+    T_SEMICOLON,
 	T_INTLIT,
     T_IDENT,
     T_NEWLINE,
@@ -41,34 +42,25 @@ enum {
 enum {
 	K_IDENT, //This is for user-made variable names
 
-    //Register names
+    //Register names (1-32)
+    K_RAX, K_EAX, K_AX, K_AL,
+    K_RCX, K_ECX, K_CX, K_CL,
+    K_RDX, K_EDX, K_DX, K_DL,
+    K_RBX, K_EBX, K_BX, K_BL,
+    K_RSI, K_ESI, K_SI, K_SIL,
+    K_RDI, K_EDI, K_DI, K_DIL,
+    K_RSP, K_ESP, K_SP, K_SPL,
+    K_RBP, K_EBP, K_BP, K_BPL,
 
-    //Extended Registers (1 - 16)
-	K_R8,
-    K_R9,
-    K_R10,
-    K_R11,
-    K_R8D,
-    K_R9D,
-    K_R10D,
-    K_R11D,
-    K_R8B,
-    K_R9B,
-    K_R10B,
-    K_R11B,
-    K_R8W,
-    K_R9W,
-    K_R10W,
-    K_R11W,
-
-    K_RAX,
-    K_RBX,
-    K_RCX,
-    K_RDX,
-    K_RSP,
-    K_RBP,
-    K_RDI,
-    K_AL,
+    //Extended Registers (33 - 65)
+	K_R8,  K_R8D,  K_R8W,  K_R8B,
+    K_R9,  K_R9D,  K_R9W,  K_R9B,
+    K_R10, K_R10D, K_R10W, K_R10B,
+    K_R11, K_R11D, K_R11W, K_R11B,
+    K_R12, K_R12D, K_R12W, K_R12B,
+    K_R13, K_R13D, K_R13W, K_R13B,
+    K_R14, K_R14D, K_R14W, K_R14B,
+    K_R15, K_R15D, K_R15W, K_R15B,
 
     //Opcodes
     K_MOV, //24
