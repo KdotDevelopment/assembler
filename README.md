@@ -1,0 +1,2 @@
+# Assembler
+This is an assembler for my compiler (https://github.com/KdotDevelopment/c-compiler) which uses intel syntax. The assembler will output an ELF file executable on a linux machine. The overall goal for this is to be run on my custom 64-bit operating system (https://github.com/KdotDevelopment/RyanOS) along with the compiler so executable programs can be made fully within the OS.
