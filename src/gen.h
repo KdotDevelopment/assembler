@@ -75,26 +75,14 @@ static machine_instruction_t arith_mem_imm[] = {
     { 0x80, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB } //+ imm16/32 (first is invalid -- never used)
 };
 
-static machine_instruction_t add_reg_reg[] = {
+static machine_instruction_t arith_reg_reg[] = {
     { 0x00, F_MODRM }, { 0x01, F_MODRM }, { 0x01, F_MODRM }, { 0x01, F_MODRM }
 };
 
-static machine_instruction_t add_mem_reg[] = {
+static machine_instruction_t arith_mem_reg[] = {
     { 0x00, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }
 };
 
-static machine_instruction_t add_reg_mem[] = {
+static machine_instruction_t arith_reg_mem[] = {
     { 0x02, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }
-};
-
-static machine_instruction_t sub_reg_reg[] = {
-    { 0x28, F_MODRM }, { 0x29, F_MODRM }, { 0x29, F_MODRM }, { 0x29, F_MODRM }
-};
-
-static machine_instruction_t sub_mem_reg[] = {
-    { 0x28, F_MODRM | F_SIB }, { 0x29, F_MODRM | F_SIB }, { 0x29, F_MODRM | F_SIB }, { 0x29, F_MODRM | F_SIB }
-};
-
-static machine_instruction_t sub_reg_mem[] = {
-    { 0x2A, F_MODRM | F_SIB }, { 0x2B, F_MODRM | F_SIB }, { 0x2B, F_MODRM | F_SIB }, { 0x2B, F_MODRM | F_SIB }
 };

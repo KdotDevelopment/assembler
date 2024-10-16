@@ -233,7 +233,7 @@ void gen_mov(instruction_t *instruction, code_gen_t *code_gen) {
     }
 }
 
-void gen_add(instruction_t *instruction, code_gen_t *code_gen) {
+void gen_arith(instruction_t *instruction, code_gen_t *code_gen) {
     int reg_size = get_register_size(instruction->operand_1.reg);
 
     gen_prefix(instruction, code_gen);
@@ -246,33 +246,39 @@ void gen_add(instruction_t *instruction, code_gen_t *code_gen) {
     uint8_t op_2_imm = instruction->operand_2.flags & OP_INTLIT;
 
     if(op_1_reg && op_2_reg) {
-        machine_instruction_t instr = add_reg_reg[get_size_index(instruction->operand_2.size)];
+        machine_instruction_t instr = arith_mem_reg[get_size_index(instruction->operand_2.size)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_reg && op_2_imm && instruction->operand_2.size == 1) {
         machine_instruction_t instr = arith_reg_imm[get_size_index(instruction->operand_2.size)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     //16, 32, or 64 bit imm (64 just makes 32 anynway)
     if(op_1_reg && op_2_imm && instruction->operand_2.size > 1) {
         machine_instruction_t instr = arith_reg_imm[get_size_index(instruction->operand_2.size + 4)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_mem && op_2_reg) {
-        machine_instruction_t instr = add_mem_reg[get_size_index(instruction->operand_2.size)];
+        machine_instruction_t instr = arith_mem_reg[get_size_index(instruction->operand_2.size)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_reg && op_2_mem) {
-        machine_instruction_t instr = add_reg_mem[get_size_index(instruction->operand_1.size)];
+        machine_instruction_t instr = arith_mem_reg[get_size_index(instruction->operand_1.size)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_mem && op_2_imm) {
         machine_instruction_t instr = arith_mem_imm[get_size_index(instruction->operand_2.size)];
+        instr.opcode += (8 * (instruction->opcode - K_ADD));
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
@@ -300,72 +306,7 @@ void gen_add(instruction_t *instruction, code_gen_t *code_gen) {
     }
 }
 
-void gen_sub(instruction_t *instruction, code_gen_t *code_gen) {
-    int reg_size = get_register_size(instruction->operand_1.reg);
-
-    gen_prefix(instruction, code_gen);
-
-    uint8_t opcode;
-    uint8_t op_1_reg = instruction->operand_1.flags & OP_REGISTER;
-    uint8_t op_1_mem = instruction->operand_1.flags & OP_MEMORY;
-    uint8_t op_2_reg = instruction->operand_2.flags & OP_REGISTER;
-    uint8_t op_2_mem = instruction->operand_2.flags & OP_MEMORY;
-    uint8_t op_2_imm = instruction->operand_2.flags & OP_INTLIT;
-
-    if(op_1_reg && op_2_reg) {
-        machine_instruction_t instr = sub_reg_reg[get_size_index(instruction->operand_2.size)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    if(op_1_reg && op_2_imm && instruction->operand_2.size == 1) {
-        machine_instruction_t instr = arith_reg_imm[get_size_index(instruction->operand_2.size)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    //16, 32, or 64 bit imm (64 just makes 32 anynway)
-    if(op_1_reg && op_2_imm && instruction->operand_2.size > 1) {
-        machine_instruction_t instr = arith_reg_imm[get_size_index(instruction->operand_2.size + 4)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    if(op_1_mem && op_2_reg) {
-        machine_instruction_t instr = sub_mem_reg[get_size_index(instruction->operand_2.size)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    if(op_1_reg && op_2_mem) {
-        machine_instruction_t instr = sub_reg_mem[get_size_index(instruction->operand_1.size)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    if(op_1_mem && op_2_imm) {
-        machine_instruction_t instr = arith_mem_imm[get_size_index(instruction->operand_2.size)];
-        gen_from_instruction(&instr, instruction, code_gen);
-    }
-
-    if(instruction->operand_2.flags & OP_INTLIT) {
-        int64_t intlit = instruction->operand_2.intlit;
-        uint8_t int_size = get_int_size(intlit);
-        switch(int_size) {
-            case 1:
-                intlit = (int8_t)intlit;
-                fwrite(&intlit, 1, 1, code_gen->out);
-                break;
-            case 2:
-                intlit = (int16_t)intlit;
-                fwrite(&intlit, 2, 1, code_gen->out);
-                break;
-            case 4:
-                intlit = (int32_t)intlit;
-                fwrite(&intlit, 4, 1, code_gen->out);
-                break;
-            case 8: //jsut because its 8 doesnt mean we put all 8 bytes in -- max 4
-                intlit = (int32_t)intlit;
-                fwrite(&intlit, 4, 1, code_gen->out);
-                break;  
-        }
-    }
-}
+//TODO: setX, movxz
 
 void generate_code(code_gen_t *code_gen) {
     for(int i = 0; i < code_gen->parser->instruction_index; i++) {
@@ -376,10 +317,13 @@ void generate_code(code_gen_t *code_gen) {
                 gen_mov(current_instruction, code_gen);
                 break;
             case K_ADD:
-                gen_add(current_instruction, code_gen);
-                break;
+            case K_OR:
+            case K_ADC:
+            case K_SBB:
+            case K_AND:
             case K_SUB:
-                gen_sub(current_instruction, code_gen);
+            case K_CMP:
+                gen_arith(current_instruction, code_gen);
                 break;
             case K_SYSCALL:
                 gen_syscall(code_gen);

@@ -151,11 +151,18 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
     else if(!strcmp(token->ident_value, "r15b")) token->keyword = K_R15B;
     
     else if(!strcmp(token->ident_value, "mov")) token->keyword = K_MOV;
+
     else if(!strcmp(token->ident_value, "add")) token->keyword = K_ADD;
+	else if(!strcmp(token->ident_value, "or")) token->keyword = K_OR;
+	else if(!strcmp(token->ident_value, "adc")) token->keyword = K_ADC;
+	else if(!strcmp(token->ident_value, "sbb")) token->keyword = K_SBB;
+	else if(!strcmp(token->ident_value, "and")) token->keyword = K_AND;
     else if(!strcmp(token->ident_value, "sub")) token->keyword = K_SUB;
+	else if(!strcmp(token->ident_value, "xor")) token->keyword = K_XOR;
+	else if(!strcmp(token->ident_value, "cmp")) token->keyword = K_CMP;
+
     else if(!strcmp(token->ident_value, "mul")) token->keyword = K_MUL;
     else if(!strcmp(token->ident_value, "div")) token->keyword = K_DIV;
-    else if(!strcmp(token->ident_value, "cmp")) token->keyword = K_CMP;
     else if(!strcmp(token->ident_value, "setz")) token->keyword = K_SETZ;
     else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
     else if(!strcmp(token->ident_value, "setne")) token->keyword = K_SETNE;

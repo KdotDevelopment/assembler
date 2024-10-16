@@ -193,9 +193,13 @@ instruction_t parse_line(parser_t *parser) {
 		case K_MOV:
 			return parse_mov(parser);
 		case K_ADD:
-			return parse_arith(parser, K_ADD);
+		case K_OR:
+		case K_ADC:
+		case K_SBB:
+		case K_AND:
 		case K_SUB:
-			return parse_arith(parser, K_SUB);
+		case K_CMP:
+			return parse_arith(parser, parser->lexer->tokens[parser->pos]->keyword);
 		case K_SYSCALL:
 			return parse_syscall(parser);
 		default:
