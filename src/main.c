@@ -6,6 +6,7 @@
 #include "elf.h"
 #include "lex.h"
 #include "parser.h"
+#include "gen.h"
 
 char buffer[24];
 char *get_file_name(char *full_name) {
@@ -27,7 +28,7 @@ char *add_file_ext(char *base_name, char *ext) {
 }
 
 // Define the machine code (x86-64)
-uint8_t machine_code[] = { 0x49, 0xC7, 0xC0, 0x09, 0x00, 0x00, 0x00, 0x49, 0x83, 0xC0, 0x0A, 0x49, 0x83, 0xC0, 0x05, 0x4C, 0x89, 0xC7, 0x48, 0xC7, 0xC0, 0x3C, 0x00, 0x00, 0x00, 0x0F, 0x05 }  ;
+uint8_t machine_code[] = { 0x49, 0xC7, 0xC0, 0x09, 0x00, 0x00, 0x00, 0x49, 0x83, 0xC0, 0x0A, 0x49, 0x83, 0xC0, 0x05, 0x4C, 0x89, 0xC7, 0x48, 0xC7, 0xC0, 0x3C, 0x00, 0x00, 0x00 }  ;
 
 int main(int argc, char *argv[]) {
 	if (argc != 2) {
@@ -101,10 +102,16 @@ int main(int argc, char *argv[]) {
 
     parse(&parser);
 
-    clean_tokens(&lexer);
+    code_gen_t code_gen;
+    code_gen.parser = &parser;
+    code_gen.out = lexer.out_file;
+    code_gen.instruction_pos = 0;
 
-    // Write the machine code (starting at the entry point 0x400080)
-    fwrite(machine_code, sizeof(machine_code), 1, lexer.out_file);
+    //fwrite(machine_code, sizeof(machine_code), 1, lexer.out_file);
+
+    generate_code(&code_gen);
+
+    clean_tokens(&lexer);
 
     // Close the file
     fclose(lexer.out_file);

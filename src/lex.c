@@ -69,32 +69,26 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "rax")) token->keyword = K_RAX;
 	else if(!strcmp(token->ident_value, "eax")) token->keyword = K_EAX;
 	else if(!strcmp(token->ident_value, "ax")) token->keyword = K_AX;
+	else if(!strcmp(token->ident_value, "ah")) token->keyword = K_AH;
 	else if(!strcmp(token->ident_value, "al")) token->keyword = K_AL;
 
 	else if(!strcmp(token->ident_value, "rcx")) token->keyword = K_RCX;
 	else if(!strcmp(token->ident_value, "ecx")) token->keyword = K_ECX;
 	else if(!strcmp(token->ident_value, "cx")) token->keyword = K_CX;
+	else if(!strcmp(token->ident_value, "ch")) token->keyword = K_CH;
 	else if(!strcmp(token->ident_value, "cl")) token->keyword = K_CL;
 
 	else if(!strcmp(token->ident_value, "rdx")) token->keyword = K_RDX;
 	else if(!strcmp(token->ident_value, "edx")) token->keyword = K_EDX;
 	else if(!strcmp(token->ident_value, "dx")) token->keyword = K_DX;
+	else if(!strcmp(token->ident_value, "dh")) token->keyword = K_DH;
 	else if(!strcmp(token->ident_value, "dl")) token->keyword = K_DL;
 
 	else if(!strcmp(token->ident_value, "rbx")) token->keyword = K_RBX;
 	else if(!strcmp(token->ident_value, "ebx")) token->keyword = K_EBX;
 	else if(!strcmp(token->ident_value, "bx")) token->keyword = K_BX;
+	else if(!strcmp(token->ident_value, "bh")) token->keyword = K_BH;
 	else if(!strcmp(token->ident_value, "bl")) token->keyword = K_BL;
-
-	else if(!strcmp(token->ident_value, "rsi")) token->keyword = K_RSI;
-	else if(!strcmp(token->ident_value, "esi")) token->keyword = K_ESI;
-	else if(!strcmp(token->ident_value, "si")) token->keyword = K_SI;
-	else if(!strcmp(token->ident_value, "sil")) token->keyword = K_SIL;
-
-	else if(!strcmp(token->ident_value, "rdi")) token->keyword = K_RDI;
-	else if(!strcmp(token->ident_value, "edi")) token->keyword = K_EDI;
-	else if(!strcmp(token->ident_value, "di")) token->keyword = K_DI;
-	else if(!strcmp(token->ident_value, "dil")) token->keyword = K_DIL;
 
 	else if(!strcmp(token->ident_value, "rsp")) token->keyword = K_RSP;
 	else if(!strcmp(token->ident_value, "esp")) token->keyword = K_ESP;
@@ -105,6 +99,16 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "ebp")) token->keyword = K_EBP;
 	else if(!strcmp(token->ident_value, "bp")) token->keyword = K_BP;
 	else if(!strcmp(token->ident_value, "bpl")) token->keyword = K_BPL;
+
+	else if(!strcmp(token->ident_value, "rsi")) token->keyword = K_RSI;
+	else if(!strcmp(token->ident_value, "esi")) token->keyword = K_ESI;
+	else if(!strcmp(token->ident_value, "si")) token->keyword = K_SI;
+	else if(!strcmp(token->ident_value, "sil")) token->keyword = K_SIL;
+
+	else if(!strcmp(token->ident_value, "rdi")) token->keyword = K_RDI;
+	else if(!strcmp(token->ident_value, "edi")) token->keyword = K_EDI;
+	else if(!strcmp(token->ident_value, "di")) token->keyword = K_DI;
+	else if(!strcmp(token->ident_value, "dil")) token->keyword = K_DIL;
 
 	else if(!strcmp(token->ident_value, "r8")) token->keyword = K_R8;
 	else if(!strcmp(token->ident_value, "r8d")) token->keyword = K_R8D;

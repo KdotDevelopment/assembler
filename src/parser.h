@@ -12,10 +12,13 @@
 typedef struct operand_t {
     uint8_t flags;
     union {
-        int reg;
-        int intlit;
+        uint8_t reg; //also base for memory
+        int64_t intlit;
     };
-    int64_t mem_offset; // -X[reg] (includes sign)
+    int64_t mem_offset; // -X[reg] (includes sign) (aka mem displacement)
+    int64_t mem_scale;  //   [reg * X] (includes sign)
+    uint8_t index_reg;
+    uint8_t size; //size in bytes of this operand
 } operand_t;
 
 //this is basically every line of code
@@ -23,6 +26,7 @@ typedef struct instruction_t {
     int opcode; //uses keywords from lex.h
     operand_t operand_1;
     operand_t operand_2;
+    size_t line_num;
 } instruction_t;
 
 typedef struct parser_t {
@@ -34,3 +38,4 @@ typedef struct parser_t {
 } parser_t;
 
 void parse(parser_t *parser);
+uint8_t get_register_size(int reg);

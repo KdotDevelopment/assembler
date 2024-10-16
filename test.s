@@ -1,8 +1,9 @@
 global main
 section .text
     main:
-        mov r8, 9
-        add r8, 10
-        mov rdi, r8
+        mov rax, 38
+        mov rcx, 2
+        sub rax, rcx
+        mov dil, al
         mov rax, 60
         syscall

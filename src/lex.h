@@ -42,33 +42,46 @@ enum {
 enum {
 	K_IDENT, //This is for user-made variable names
 
-    //Register names (1-32)
-    K_RAX, K_EAX, K_AX, K_AL,
-    K_RCX, K_ECX, K_CX, K_CL,
-    K_RDX, K_EDX, K_DX, K_DL,
-    K_RBX, K_EBX, K_BX, K_BL,
-    K_RSI, K_ESI, K_SI, K_SIL,
-    K_RDI, K_EDI, K_DI, K_DIL,
-    K_RSP, K_ESP, K_SP, K_SPL,
-    K_RBP, K_EBP, K_BP, K_BPL,
+    //64-bit registers (1 - 16)
+    K_RAX, K_RCX, K_RDX, K_RBX,
+    K_RSP, K_RBP, K_RSI, K_RDI,
+    K_R8,  K_R9,  K_R10, K_R11,
+    K_R12, K_R13, K_R14, K_R15,
 
-    //Extended Registers (33 - 65)
-	K_R8,  K_R8D,  K_R8W,  K_R8B,
-    K_R9,  K_R9D,  K_R9W,  K_R9B,
-    K_R10, K_R10D, K_R10W, K_R10B,
-    K_R11, K_R11D, K_R11W, K_R11B,
-    K_R12, K_R12D, K_R12W, K_R12B,
-    K_R13, K_R13D, K_R13W, K_R13B,
-    K_R14, K_R14D, K_R14W, K_R14B,
-    K_R15, K_R15D, K_R15W, K_R15B,
+    //32-bit registers (17 - 32)
+    K_EAX,  K_ECX,  K_EDX,  K_EBX,
+    K_ESP,  K_EBP,  K_ESI,  K_EDI,
+    K_R8D,  K_R9D,  K_R10D, K_R11D,
+    K_R12D, K_R13D, K_R14D, K_R15D,
 
+    //16-bit registers (33 - 48)
+	K_AX,   K_CX,   K_DX,   K_BX,
+    K_SP,   K_BP,   K_SI,   K_DI,
+    K_R8W,  K_R9W,  K_R10W, K_R11W,
+    K_R12W, K_R13W, K_R14W, K_R15W,
+
+    //8-bit registers (49 - 68)
+    K_AL,   K_CL,   K_DL,   K_BL,
+    K_AH,   K_CH,   K_DH,   K_BH,
+    K_SPL,  K_BPL,  K_SIL,  K_DIL,
+    K_R8B,  K_R9B,  K_R10B, K_R11B,
+    K_R12B, K_R13B, K_R14B, K_R15B,
+    
     //Opcodes
-    K_MOV, //24
+    K_MOV, //69
+
+    //Shared Opcodes
     K_ADD,
+    K_OR,
+    K_ADC,
+    K_SBB,
+    K_AND,
     K_SUB,
+    K_XOR,
+    K_CMP,
+
     K_MUL,
     K_DIV,
-    K_CMP,
     K_SETZ,
     K_MOVZX,
     K_SETNE,
