@@ -86,3 +86,8 @@ static machine_instruction_t arith_mem_reg[] = {
 static machine_instruction_t arith_reg_mem[] = {
     { 0x02, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }
 };
+
+static uint8_t two_byte_opcode = 0x0F;
+static uint8_t set_reg = 0x90;
+static uint8_t movzx_8 = 0xB6;
+static uint8_t movzx_16 = 0xB7;

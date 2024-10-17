@@ -80,15 +80,43 @@ enum {
     K_XOR,
     K_CMP,
 
+    K_SETO,  //overflow
+    K_SETNO, //not overflow
+    K_SETB,  //below (synonyms: setnae, setc)
+    K_SETNB, //not below (synonyms: setae, setnc)
+    K_SETZ,  //zero (synonym: sete)
+    K_SETNZ, //not zero (synontm: setne)
+    K_SETBE, //below or equal (synontm: setna)
+    K_SETA,  //above (synonym: setnbe)
+    K_SETS,  //sign
+    K_SETNS, //not sign
+    K_SETP,  //parity (synonym: setpe)
+    K_SETNP, //not parity (synonym: setpo)
+    K_SETL,  //less than (synonym: setnge)
+    K_SETGE, //greater or equal (synonym: setnl)
+    K_SETLE, //less or equal (synonym: setng)
+    K_SETG,  //greater (synonym: setnle)
+
+    K_JO,  //overflow
+    K_JNO, //not overflow
+    K_JB,  //below (synonyms: jnae, jc)
+    K_JNB, //not below (synonyms: jae, jnc)
+    K_JZ,  //zero (synonym: je)
+    K_JNZ, //not zero (synontm: jne)
+    K_JBE, //below or equal (synontm: jna)
+    K_JA,  //above (synonym: jnbe)
+    K_JS,  //sign
+    K_JNS, //not sign
+    K_JP,  //parity (synonym: jpe)
+    K_JNP, //not parity (synonym: jpo)
+    K_JL,  //less than (synonym: jnge)
+    K_JGE, //greater or equal (synonym: jnl)
+    K_JLE, //less or equal (synonym: jng)
+    K_JG,  //greater (synonym: jnle)
+
     K_MUL,
     K_DIV,
-    K_SETZ,
     K_MOVZX,
-    K_SETNE,
-    K_SETL,
-    K_SETLE,
-    K_SETG,
-    K_SETGE,
     K_CALL,
     K_PUSH,
     K_POP,

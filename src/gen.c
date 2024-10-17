@@ -115,9 +115,6 @@ void gen_prefix(instruction_t *instruction, code_gen_t *code_gen) {
 void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_gen) {
     uint8_t mrrm = 0b00000000; // [0 0] MOD, [0 0 0] Reg/Opcode, [0 0 0] R/M
 
-    //if(instruction->operand_1.flags & OP_REGISTER && (instruction->operand_1.size == 4 || (instruction->operand_1.size == 1 && instruction->operand_2.flags & OP_INTLIT))) return;
-    //if(instruction->operand_1.flags & OP_REGISTER && instruction->operand_1.size == 2 && instruction->operand_2.flags & OP_INTLIT) return;
-
     if(instruction->operand_2.flags & OP_MEMORY && instruction->operand_2.mem_offset == 0) {
         mrrm |= 0b00000000; //keep first two zero, basically
     }
@@ -222,13 +219,10 @@ void gen_mov(instruction_t *instruction, code_gen_t *code_gen) {
                 fwrite(&intlit, 2, 1, code_gen->out);
                 break;
             case 4:
-                intlit = (int32_t)intlit;
-                fwrite(&intlit, 4, 1, code_gen->out);
-                break;
             case 8: //just because its 8 doesnt mean we put all 8 bytes in -- max 4
                 intlit = (int32_t)intlit;
                 fwrite(&intlit, 4, 1, code_gen->out);
-                break;  
+                break;
         }
     }
 }
@@ -295,18 +289,23 @@ void gen_arith(instruction_t *instruction, code_gen_t *code_gen) {
                 fwrite(&intlit, 2, 1, code_gen->out);
                 break;
             case 4:
+            case 8:
                 intlit = (int32_t)intlit;
                 fwrite(&intlit, 4, 1, code_gen->out);
                 break;
-            case 8: //jsut because its 8 doesnt mean we put all 8 bytes in -- max 4
-                intlit = (int32_t)intlit;
-                fwrite(&intlit, 4, 1, code_gen->out);
-                break;  
         }
     }
 }
 
-//TODO: setX, movxz
+void gen_set(instruction_t *instruction, code_gen_t *code_gen) {
+    uint8_t opcode = set_reg + instruction->opcode - K_SETO; //adds appropriate val to 0F90, keyword enum is in right order
+
+    fwrite(&two_byte_opcode, sizeof(two_byte_opcode), 1, code_gen->out);
+    fwrite(&opcode, sizeof(opcode), 1, code_gen->out);
+    gen_modrm(instruction, 0, code_gen);
+}
+
+//TODO: setX (synonyms), movxz, mul, div, push, pop, memory addresses SIB, symbol table, jmp, jX (synonyms), call
 
 void generate_code(code_gen_t *code_gen) {
     for(int i = 0; i < code_gen->parser->instruction_index; i++) {
@@ -325,11 +324,30 @@ void generate_code(code_gen_t *code_gen) {
             case K_CMP:
                 gen_arith(current_instruction, code_gen);
                 break;
+            case K_SETO:
+            case K_SETNO:
+            case K_SETB:
+            case K_SETNB:
+            case K_SETZ:
+            case K_SETNZ:
+            case K_SETBE:
+            case K_SETA:
+            case K_SETS:
+            case K_SETNS:
+            case K_SETP:
+            case K_SETNP:
+            case K_SETL:
+            case K_SETGE:
+            case K_SETLE:
+            case K_SETG:
+                gen_set(current_instruction, code_gen);
+                break;
             case K_SYSCALL:
                 gen_syscall(code_gen);
                 break;
             default:
                 printf("Code gen error: unknown opcode %d\n", current_instruction->opcode);
+                exit(1);
         }
     }
 }

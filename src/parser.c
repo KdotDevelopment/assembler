@@ -186,6 +186,21 @@ instruction_t parse_syscall(parser_t *parser) {
 
 	return instr;
 }
+
+instruction_t parse_set(parser_t *parser, int opcode) {
+	instruction_t instr;
+
+	instr.opcode = opcode;
+	parser->pos++;
+	instr.operand_1 = parse_operand(parser, OP_REGISTER);
+	if(get_register_size(instr.operand_1.reg) != 1) {
+		printf("Only 8-bit registers/memory allowed for set instructions on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	parser->pos++;
+
+	return instr;
+}
  
 instruction_t parse_line(parser_t *parser) {
 	//We are expecting that each newline starts with an opcode
@@ -200,6 +215,23 @@ instruction_t parse_line(parser_t *parser) {
 		case K_SUB:
 		case K_CMP:
 			return parse_arith(parser, parser->lexer->tokens[parser->pos]->keyword);
+		case K_SETO:
+		case K_SETNO:
+		case K_SETB:
+		case K_SETNB:
+		case K_SETZ:
+		case K_SETNZ:
+		case K_SETBE:
+		case K_SETA:
+		case K_SETS:
+		case K_SETNS:
+		case K_SETP:
+		case K_SETNP:
+		case K_SETL:
+		case K_SETGE:
+		case K_SETLE:
+		case K_SETG:
+			return parse_set(parser, parser->lexer->tokens[parser->pos]->keyword);
 		case K_SYSCALL:
 			return parse_syscall(parser);
 		default:
