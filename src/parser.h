@@ -7,7 +7,11 @@
 #define OP_REGISTER 0x01
 #define OP_INTLIT 0x02
 #define OP_MEMORY 0x04
-#define OP_INVALID 0x08
+#define OP_8BIT 0x08
+#define OP_16BIT 0x10
+#define OP_32BIT 0x20
+#define OP_64BIT 0x40
+#define OP_INVALID 0x80
 
 typedef struct operand_t {
     uint8_t flags;

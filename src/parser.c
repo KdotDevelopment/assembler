@@ -5,6 +5,30 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+//takes in register keyword, outputs num of bytes
+uint8_t get_register_size(int reg) {
+    if(reg >= K_RAX && reg <= K_R15) return 8;
+    if(reg >= K_EAX && reg <= K_R15D) return 4;
+    if(reg >= K_AX && reg <= K_R15W) return 2;
+    if(reg >= K_AL && reg <= K_R15B) return 1;
+}
+
+void set_operand_size(operand_t *operand) {
+	if(!operand) return;
+
+	if(operand->flags & OP_REGISTER || operand->flags & OP_MEMORY) {
+		operand->size = get_register_size(operand->reg);
+		return;
+	}
+
+	if(operand->flags & OP_INTLIT) {
+		if(operand->intlit < 128 && operand->intlit >= -128) operand->size = 1; return;
+		if(operand->intlit < 32768 && operand->intlit >= -32768) operand->size = 2; return;
+		if(operand->intlit < 2147483648 && operand->intlit >= -2147483648) operand->size = 4; return;
+		if(operand->intlit < 9223372036854775807 && operand->intlit >= -9223372036854775807) operand->size = 8; return;
+	}
+}
+
 //Checks if the next set of tokens represent a memory address token (format -X[reg] or [reg]) and returns an operand if so
 operand_t memory_operand(parser_t *parser) {
 	operand_t operand;
@@ -147,38 +171,10 @@ void require_newline(parser_t *parser) {
 	parser->pos++;
 }
 
-instruction_t parse_mov(parser_t *parser) {
-	instruction_t instr;
-
-	instr.opcode = K_MOV;
-	parser->pos++; //past opcode
-	instr.operand_1 = parse_operand(parser, OP_REGISTER | OP_MEMORY);
-	parser->pos++;
-	require_comma(parser);
-	instr.operand_2 = parse_operand(parser, OP_REGISTER | OP_MEMORY | OP_INTLIT);
-	parser->pos++;
-
-	return instr;
-}
-
-instruction_t parse_arith(parser_t *parser, int opcode) {
+instruction_t parse_no_operands(parser_t *parser, int opcode) {
 	instruction_t instr;
 
 	instr.opcode = opcode;
-	parser->pos++; //past opcode
-	instr.operand_1 = parse_operand(parser, OP_REGISTER | OP_MEMORY);
-	parser->pos++;
-	require_comma(parser);
-	instr.operand_2 = parse_operand(parser, OP_REGISTER | OP_MEMORY | OP_INTLIT);
-	parser->pos++;
-
-	return instr;
-}
-
-instruction_t parse_syscall(parser_t *parser) {
-	instruction_t instr;
-
-	instr.opcode = K_SYSCALL;
 	instr.operand_1.reg = 0;
 	instr.operand_2.reg = 0;
 
@@ -187,26 +183,74 @@ instruction_t parse_syscall(parser_t *parser) {
 	return instr;
 }
 
-instruction_t parse_set(parser_t *parser, int opcode) {
+void is_operand_valid(parser_t *parser, operand_t *operand, uint8_t flags) {
+	set_operand_size(operand);
+	uint8_t size = operand->size;
+	uint8_t must_check = flags & 0b01111000; //filter only size flags -- if present we must check all of them. if not, do not check size at all
+
+	if(!must_check) return;
+
+	if(size == 1 && !(flags & OP_8BIT)) {
+		printf("8-bit operand not allowed in operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	if(size == 2 && !(flags & OP_16BIT)) {
+		printf("16-bit operand not allowed in operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	if(size == 4 && !(flags & OP_32BIT)) {
+		printf("32-bit operand not allowed in operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	if(size == 8 && !(flags & OP_64BIT)) {
+		printf("64-bit operand not allowed in operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+}
+
+instruction_t parse_instruction(parser_t *parser, int opcode, uint8_t operand_1_flags, uint8_t operand_2_flags) {
 	instruction_t instr;
 
 	instr.opcode = opcode;
+	parser->pos++; //past opcode
+	instr.operand_1 = parse_operand(parser, operand_1_flags & 0b00000111); //last three bits are reg, mem, imm, rest are amount of bits
+
+	is_operand_valid(parser, &instr.operand_1, operand_1_flags);
+
 	parser->pos++;
-	instr.operand_1 = parse_operand(parser, OP_REGISTER);
-	if(get_register_size(instr.operand_1.reg) != 1) {
-		printf("Only 8-bit registers/memory allowed for set instructions on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
-		exit(1);
+
+	if(operand_2_flags & OP_INVALID) {
+		operand_t invalid_op;
+		invalid_op.flags = OP_INVALID;
+		instr.operand_2 = invalid_op;
+		return instr;
 	}
+
+	require_comma(parser);
+	instr.operand_2 = parse_operand(parser, operand_2_flags & 0b00000111); //last three bits are reg, mem, imm, rest are amount of bits
+
+	is_operand_valid(parser, &instr.operand_2, operand_2_flags);
+
 	parser->pos++;
 
 	return instr;
 }
- 
+
 instruction_t parse_line(parser_t *parser) {
 	//We are expecting that each newline starts with an opcode
-	switch(parser->lexer->tokens[parser->pos]->keyword) {
+	if(parser->lexer->tokens[parser->pos]->token != T_IDENT) {
+		instruction_t invalid;
+		invalid.opcode = -1;
+		return invalid;
+	}
+
+	int keyword = parser->lexer->tokens[parser->pos]->keyword;
+
+	//Xbit flags are strict if any are used, if none are defined then any amount is allowed
+	switch(keyword) {
+		case K_MOVZX:
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY | OP_16BIT | OP_32BIT | OP_64BIT, OP_REGISTER | OP_MEMORY | OP_8BIT | OP_16BIT);
 		case K_MOV:
-			return parse_mov(parser);
 		case K_ADD:
 		case K_OR:
 		case K_ADC:
@@ -214,7 +258,7 @@ instruction_t parse_line(parser_t *parser) {
 		case K_AND:
 		case K_SUB:
 		case K_CMP:
-			return parse_arith(parser, parser->lexer->tokens[parser->pos]->keyword);
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY, OP_REGISTER | OP_MEMORY | OP_INTLIT);
 		case K_SETO:
 		case K_SETNO:
 		case K_SETB:
@@ -231,36 +275,26 @@ instruction_t parse_line(parser_t *parser) {
 		case K_SETGE:
 		case K_SETLE:
 		case K_SETG:
-			return parse_set(parser, parser->lexer->tokens[parser->pos]->keyword);
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_8BIT, OP_INVALID);
+		case K_TEST:
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY, OP_INTLIT);
+		case K_NEG:
+		case K_NOT:
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY, OP_INVALID);
+		case K_MUL:
+		case K_IMUL:
+		case K_DIV:
+		case K_IDIV:
+			return parse_instruction(parser, keyword, OP_REGISTER, OP_INVALID);
 		case K_SYSCALL:
-			return parse_syscall(parser);
+		case K_RET:
+			return parse_no_operands(parser, keyword);
+		case K_IDENT:
+			parser->pos++;
+			break;
 		default:
 			printf("Invalid opcode \"%s\" on line %d\n", parser->lexer->tokens[parser->pos]->ident_value, parser->lexer->tokens[parser->pos]->line_num);
 			exit(1);
-	}
-}
-
-//takes in register keyword, outputs num of bytes
-uint8_t get_register_size(int reg) {
-    if(reg >= K_RAX && reg <= K_R15) return 8;
-    if(reg >= K_EAX && reg <= K_R15D) return 4;
-    if(reg >= K_AX && reg <= K_R15W) return 2;
-    if(reg >= K_AL && reg <= K_R15B) return 1;
-}
-
-void set_operand_size(operand_t *operand) {
-	if(!operand) return;
-
-	if(operand->flags & OP_REGISTER || operand->flags & OP_MEMORY) {
-		operand->size = get_register_size(operand->reg);
-		return;
-	}
-
-	if(operand->flags & OP_INTLIT) {
-		if(operand->intlit < 128 && operand->intlit >= -128) operand->size = 1; return;
-		if(operand->intlit < 32768 && operand->intlit >= -32768) operand->size = 2; return;
-		if(operand->intlit < 2147483648 && operand->intlit >= -2147483648) operand->size = 4; return;
-		if(operand->intlit < 9223372036854775807 && operand->intlit >= -9223372036854775807) operand->size = 8; return;
 	}
 }
 
@@ -282,6 +316,10 @@ void parse(parser_t *parser) {
 
 	//this begins the instruction part
 	while(parser->lexer->tokens[parser->pos]->token != T_EOF) {
+		//Handle comments
+		if(parser->lexer->tokens[parser->pos]->token == T_SEMICOLON) {
+			while(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) parser->pos++;
+		}
 		if(parser->instruction_index > max_instruction_count) {
 			max_instruction_count *= 2;
 			parser->instructions = (instruction_t **)realloc(parser->instructions, max_instruction_count * sizeof(instruction_t *));
@@ -289,6 +327,11 @@ void parse(parser_t *parser) {
 		//memset(&current_instruction, 0, sizeof(current_instruction));
 		size_t line_num = parser->lexer->tokens[parser->pos]->line_num;
 		instruction_t current_instruction = parse_line(parser);
+
+		if(current_instruction.opcode == -1) {
+			parser->pos++;
+			continue;
+		}
 
 		instruction_t *permenant_instruction = (instruction_t *)malloc(sizeof(instruction_t));
 		permenant_instruction->opcode = current_instruction.opcode;
@@ -305,10 +348,6 @@ void parse(parser_t *parser) {
 
 		if(parser->lexer->tokens[parser->pos]->token == T_EOF) continue;
 
-		//Handle comments
-		if(parser->lexer->tokens[parser->pos]->token == T_SEMICOLON) {
-			while(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) parser->pos++;
-		}
 		require_newline(parser);
 	}
 }

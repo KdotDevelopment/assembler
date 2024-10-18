@@ -20,6 +20,7 @@
 #define F_ADD_REG 0x02
 #define F_SIB 0x08
 #define F_REG_OPCODE 0x10 //modrm reg byte opcode modifier
+#define F_TWO_BYTE 0x20   //adds 0x0F before opcode
 
 typedef struct {
     parser_t *parser;
@@ -87,7 +88,13 @@ static machine_instruction_t arith_reg_mem[] = {
     { 0x02, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }
 };
 
+static uint8_t ret_opcode = 0xC3;
+
+static machine_instruction_t arith_2_8 = { 0xF6, F_MODRM | F_REG_OPCODE };
+static machine_instruction_t arith_2_16 = { 0xF7, F_MODRM | F_REG_OPCODE };
+
+//2-byte opcodes:
 static uint8_t two_byte_opcode = 0x0F;
-static uint8_t set_reg = 0x90;
-static uint8_t movzx_8 = 0xB6;
-static uint8_t movzx_16 = 0xB7;
+static machine_instruction_t set_reg = { 0x90, F_MODRM | F_TWO_BYTE };
+static machine_instruction_t movzx_8 = { 0xB6, F_MODRM | F_TWO_BYTE };
+static machine_instruction_t movzx_16 = { 0xB7, F_MODRM | F_TWO_BYTE };

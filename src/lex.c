@@ -161,6 +161,14 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "xor")) token->keyword = K_XOR;
 	else if(!strcmp(token->ident_value, "cmp")) token->keyword = K_CMP;
 
+	else if(!strcmp(token->ident_value, "test")) token->keyword = K_TEST;
+    else if(!strcmp(token->ident_value, "not")) token->keyword = K_NOT;
+	else if(!strcmp(token->ident_value, "neg")) token->keyword = K_NEG;
+	else if(!strcmp(token->ident_value, "mul")) token->keyword = K_MUL;
+	else if(!strcmp(token->ident_value, "imul")) token->keyword = K_IMUL;
+	else if(!strcmp(token->ident_value, "div")) token->keyword = K_DIV;
+	else if(!strcmp(token->ident_value, "idiv")) token->keyword = K_IDIV;
+
 	else if(!strcmp(token->ident_value, "seto")) token->keyword = K_SETO;
 	else if(!strcmp(token->ident_value, "setno")) token->keyword = K_SETNO;
 	else if(!strcmp(token->ident_value, "setb")) token->keyword = K_SETB;
@@ -223,8 +231,6 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "jg")) token->keyword = K_JG;
 	else if(!strcmp(token->ident_value, "jnle")) token->keyword = K_JG;
 
-    else if(!strcmp(token->ident_value, "mul")) token->keyword = K_MUL;
-    else if(!strcmp(token->ident_value, "div")) token->keyword = K_DIV;
     else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
     else if(!strcmp(token->ident_value, "call")) token->keyword = K_CALL;
     else if(!strcmp(token->ident_value, "push")) token->keyword = K_PUSH;
@@ -318,6 +324,18 @@ void lex(lexer_t *lexer) {
 		token_t *permenant_token = malloc(sizeof(token_t));
 
 		current_token = scan(lexer);
+
+		//skip comments
+		if(current_token.token == T_SEMICOLON) {
+			while(lexer->character != '\n') {
+				lexer->character = skip_char(lexer);
+				//current_token = scan(lexer);
+			}
+			ungetc('\n', lexer->in_file);
+			lexer->line_num++;
+			continue;
+		}
+
 		strcpy(permenant_token->ident_value, current_token.ident_value);
 		permenant_token->int_value = current_token.int_value;
 		permenant_token->keyword = current_token.keyword;

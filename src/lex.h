@@ -70,7 +70,7 @@ enum {
     //Opcodes
     K_MOV, //69
 
-    //Shared Opcodes
+    //Shared
     K_ADD,
     K_OR,
     K_ADC,
@@ -79,6 +79,15 @@ enum {
     K_SUB,
     K_XOR,
     K_CMP,
+
+    //Shared
+    K_TEST,
+    K_NOT,
+    K_NEG,
+    K_MUL,
+    K_IMUL,
+    K_DIV,
+    K_IDIV,
 
     K_SETO,  //overflow
     K_SETNO, //not overflow
@@ -113,9 +122,7 @@ enum {
     K_JGE, //greater or equal (synonym: jnl)
     K_JLE, //less or equal (synonym: jng)
     K_JG,  //greater (synonym: jnle)
-
-    K_MUL,
-    K_DIV,
+    
     K_MOVZX,
     K_CALL,
     K_PUSH,
