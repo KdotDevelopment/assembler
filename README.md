@@ -5,13 +5,17 @@ This is an x86 assembler for my compiler (https://github.com/KdotDevelopment/c-c
 ## What can it do now?
 Currently, it supports the following instructions:
 
-mov, movzx, push, pop, ret, syscall,
+mov, movzx, push, pop, ret, syscall, lea
 
 add, or, adc, sbb, and, sub, xor, cmp,
 
 test, not, neg, mul, imul, div, idiv,
 
 all variations of set
+
+all variations of jmp
+
+call
 
 
 
@@ -29,4 +33,4 @@ al - dil (and high byte registers ah, ch, dh, bh)
 
 
 ## What can't it do now?
-It cannot do labels, and it cannot branch. Making a symbol table and keeping track of where each label starts in memory is gonna be my next step.
+The syntax for memory addressing math is a bit special and right now it cannot parse something like [rax + rcx * 2 + 4], in fact in order to use any displacement or index register, it must come outside of the brackets such as -4[rbp] or rcx[rbp], which differs from other common assemblers. -4[rbp * 2] is also allowed.
