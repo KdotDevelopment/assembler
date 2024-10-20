@@ -151,6 +151,12 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
     else if(!strcmp(token->ident_value, "r15b")) token->keyword = K_R15B;
     
     else if(!strcmp(token->ident_value, "mov")) token->keyword = K_MOV;
+	else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
+
+	else if(!strcmp(token->ident_value, "push")) token->keyword = K_PUSH;
+    else if(!strcmp(token->ident_value, "pop")) token->keyword = K_POP;
+	else if(!strcmp(token->ident_value, "ret")) token->keyword = K_RET;
+    else if(!strcmp(token->ident_value, "syscall")) token->keyword = K_SYSCALL;
 
     else if(!strcmp(token->ident_value, "add")) token->keyword = K_ADD;
 	else if(!strcmp(token->ident_value, "or")) token->keyword = K_OR;
@@ -231,12 +237,7 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "jg")) token->keyword = K_JG;
 	else if(!strcmp(token->ident_value, "jnle")) token->keyword = K_JG;
 
-    else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
     else if(!strcmp(token->ident_value, "call")) token->keyword = K_CALL;
-    else if(!strcmp(token->ident_value, "push")) token->keyword = K_PUSH;
-    else if(!strcmp(token->ident_value, "pop")) token->keyword = K_POP;
-    else if(!strcmp(token->ident_value, "ret")) token->keyword = K_RET;
-    else if(!strcmp(token->ident_value, "syscall")) token->keyword = K_SYSCALL;
     else if(!strcmp(token->ident_value, "BYTE")) token->keyword = K_BYTE;
     else if(!strcmp(token->ident_value, "WORD")) token->keyword = K_WORD;
     else if(!strcmp(token->ident_value, "DWORD")) token->keyword = K_DWORD;
@@ -271,6 +272,9 @@ token_t scan(lexer_t *lexer) {
         case ']':
             token.token = T_RBRACKET;
             break;
+		case '*':
+			token.token = T_STAR;
+			break;
 		case ',':
 			token.token = T_COMMA;
 			break;

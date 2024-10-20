@@ -17,10 +17,10 @@
 
 #define F_NONE 0x0
 #define F_MODRM 0x01
-#define F_ADD_REG 0x02
-#define F_SIB 0x08
-#define F_REG_OPCODE 0x10 //modrm reg byte opcode modifier
-#define F_TWO_BYTE 0x20   //adds 0x0F before opcode
+#define F_ADD_REG 0x02 //adds the register value to the opcode itself
+#define F_SIB 0x04
+#define F_REG_OPCODE 0x08 //modrm reg byte opcode modifier
+#define F_TWO_BYTE 0x10   //adds 0x0F before opcode
 
 typedef struct {
     parser_t *parser;
@@ -48,14 +48,9 @@ static machine_instruction_t mov_reg_reg[] = {
     { 0x88, F_MODRM }, { 0x89, F_MODRM }, { 0x89, F_MODRM }, { 0x89, F_MODRM }
 };
 
-static machine_instruction_t mov_mem_reg[] = {
-    //r1                       //r2                       //r4                       //r8
-    { 0x88, F_MODRM | F_SIB }, { 0x89, F_MODRM | F_SIB }, { 0x89, F_MODRM | F_SIB }, { 0x89, F_MODRM | F_SIB }
-};
-
 static machine_instruction_t mov_reg_mem[] = {
     //reg size
-    { 0x8A, F_MODRM | F_SIB }, { 0x8B, F_MODRM | F_SIB }, { 0x8B, F_MODRM | F_SIB }, { 0x8B, F_MODRM | F_SIB }
+    { 0x8A, F_MODRM }, { 0x8B, F_MODRM }, { 0x8B, F_MODRM }, { 0x8B, F_MODRM }
 };
 
 //imm size (1, 2, 4, 8 -> 0, 1, 2, 3) (byte word dword qword)
@@ -71,27 +66,22 @@ static machine_instruction_t arith_reg_imm[] = {
     { 0x80, F_MODRM | F_REG_OPCODE }, { 0x81, F_MODRM | F_REG_OPCODE }, { 0x81, F_MODRM | F_REG_OPCODE }, { 0x81, F_MODRM | F_REG_OPCODE } //+ imm16/32 (first is invalid -- never used)
 };
 
-static machine_instruction_t arith_mem_imm[] = {
-    { 0x80, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x83, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x83, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x83, F_MODRM | F_REG_OPCODE | F_SIB }, //reg 1 2 4 8 + imm8
-    { 0x80, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB }, { 0x81, F_MODRM | F_REG_OPCODE | F_SIB } //+ imm16/32 (first is invalid -- never used)
-};
-
+//also mem_reg
 static machine_instruction_t arith_reg_reg[] = {
     { 0x00, F_MODRM }, { 0x01, F_MODRM }, { 0x01, F_MODRM }, { 0x01, F_MODRM }
 };
 
-static machine_instruction_t arith_mem_reg[] = {
-    { 0x00, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }, { 0x01, F_MODRM | F_SIB }
-};
-
 static machine_instruction_t arith_reg_mem[] = {
-    { 0x02, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }, { 0x03, F_MODRM | F_SIB }
+    { 0x02, F_MODRM }, { 0x03, F_MODRM }, { 0x03, F_MODRM }, { 0x03, F_MODRM }
 };
 
 static uint8_t ret_opcode = 0xC3;
 
 static machine_instruction_t arith_2_8 = { 0xF6, F_MODRM | F_REG_OPCODE };
 static machine_instruction_t arith_2_16 = { 0xF7, F_MODRM | F_REG_OPCODE };
+
+static machine_instruction_t push_reg = { 0x50, F_ADD_REG };
+static machine_instruction_t pop_reg = { 0x58, F_ADD_REG };
 
 //2-byte opcodes:
 static uint8_t two_byte_opcode = 0x0F;

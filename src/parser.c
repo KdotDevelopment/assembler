@@ -32,20 +32,18 @@ void set_operand_size(operand_t *operand) {
 //Checks if the next set of tokens represent a memory address token (format -X[reg] or [reg]) and returns an operand if so
 operand_t memory_operand(parser_t *parser) {
 	operand_t operand;
+	memset(&operand, 0, sizeof(operand));
 	token_t *current_token = parser->lexer->tokens[parser->pos];
 	int token_index = parser->pos; // we cannot use the real one because it needs to revert back if unsuccessful.
 
-	//-X[reg] X[reg] or [reg] all acceptable
-	if(current_token->token != T_MINUS && current_token->token != T_LBRACKET && current_token->token != T_INTLIT) {
-		operand.flags = OP_INVALID;
-		return operand;
-	}
+	operand.mem_scale = 1; //default, obviously zero isn't right
 
+	//scale
 	if(current_token->token == T_MINUS) {
 		token_index++;
 		current_token = parser->lexer->tokens[token_index];
 		if(current_token->token == T_INTLIT) {
-			operand.mem_offset = current_token->int_value * -1;
+			operand.mem_displacement = current_token->int_value * -1;
 			token_index++; //hopefully to '[' of register
 			current_token = parser->lexer->tokens[token_index];
 		}else {
@@ -53,9 +51,18 @@ operand_t memory_operand(parser_t *parser) {
 			exit(1);
 		}
 	}else if(current_token->token == T_INTLIT) {
-		operand.mem_offset = current_token->int_value;
+		operand.mem_displacement = current_token->int_value;
 		token_index++; //hopefully to '[' of register
 		current_token = parser->lexer->tokens[token_index];
+	}else if(current_token->keyword >= K_RAX && current_token->keyword <= K_R15D) { //non-negative displacement may be a register too
+		operand.index_reg = current_token->keyword;
+		token_index++; //hopefully to '[' of register
+		current_token = parser->lexer->tokens[token_index];
+		//register but then no [ means this isn't a memory thing
+		if(current_token->token != T_LBRACKET) {
+			operand.flags = OP_INVALID;
+			return operand;
+		}
 	}
 
 	if(current_token->token != T_LBRACKET) {
@@ -63,22 +70,42 @@ operand_t memory_operand(parser_t *parser) {
 		return operand;
 	}
 
-	operand.mem_offset = 0;
-
 	token_index++; // '[' to reg name
 	current_token = parser->lexer->tokens[token_index];
 
-	//is a register
+	//is a register 32 or 64bit
 	if(current_token->keyword >= K_RAX && current_token->keyword <= K_R15D) {
 		operand.reg = current_token->keyword;
+		if(get_register_size(operand.index_reg) != get_register_size(operand.reg) && operand.index_reg != 0) { //base and index must be same size to add
+			printf("%d, %d\n", get_register_size(operand.index_reg), get_register_size(operand.reg));
+			printf("Index register and base register must be of same size on line %d\n", parser->lexer->tokens[token_index - 1]->line_num);
+			exit(1);
+		}
 	}else {
 		printf("Expected 32/64-bit register within brackets in operand on line %d\n", parser->lexer->tokens[token_index - 1]->line_num);
 		exit(1);
 	}
 
-	token_index++; //reg name to ']'
+	token_index++; //reg name to ']' or '*'
 	current_token = parser->lexer->tokens[token_index];
 
+	//scale value or end disp[reg * scale] or disp[reg]
+	if(current_token->token == T_STAR) {
+		token_index++; //to hopefully intlit
+		current_token = parser->lexer->tokens[token_index];
+		if(current_token->token != T_INTLIT) {
+			printf("Expected integer after multiplication operator in memory operand on line %d\n", parser->lexer->tokens[token_index - 1]->line_num);
+			exit(1);
+		}
+		if(current_token->int_value != 1 && current_token->int_value != 2 && current_token->int_value != 4 && current_token->int_value != 8) {
+			printf("Scale must be 1, 2, 4 or 8 in operand on line %d\n", parser->lexer->tokens[token_index - 1]->line_num);
+			exit(1);
+		}
+		operand.mem_scale = current_token->int_value;
+		token_index++; //to hopefully ]
+		current_token = parser->lexer->tokens[token_index];
+	}
+	
 	if(current_token->token != T_RBRACKET) {
 		printf("Expected right square bracket after register name in operand on line %d\n", parser->lexer->tokens[token_index - 1]->line_num);
 		exit(1);
@@ -116,6 +143,7 @@ uint8_t parse_size_modifier(parser_t *parser) {
 //Use like OP_REGISTER | OP_INTLIT to accept both register and integer literal
 operand_t parse_operand(parser_t *parser, uint8_t flags) {
 	operand_t operand;
+	memset(&operand, 0, sizeof(operand_t));
 
 	//check for byte word dword qword and set size (otherwise size is set automatically)
 	uint8_t force_size = parse_size_modifier(parser);
@@ -137,6 +165,7 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 			printf("Invalid register operand \"%s\" and opcode combination on line %d\n", token->ident_value, token->line_num);
 			exit(1);
 		}
+		memset(&operand, 0, sizeof(operand));
 		operand.reg = token->keyword;
 		operand.flags = OP_REGISTER;
 		operand.size = force_size;
@@ -145,6 +174,7 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 			printf("Invalid intlit operand %d and opcode combination on line %d\n", token->int_value, token->line_num);
 			exit(1);
 		}
+		memset(&operand, 0, sizeof(operand));
 		operand.intlit = token->int_value;
 		operand.flags = OP_INTLIT;
 		operand.size = force_size;
@@ -184,7 +214,7 @@ instruction_t parse_no_operands(parser_t *parser, int opcode) {
 }
 
 void is_operand_valid(parser_t *parser, operand_t *operand, uint8_t flags) {
-	set_operand_size(operand);
+	if(operand->size == 0) set_operand_size(operand);
 	uint8_t size = operand->size;
 	uint8_t must_check = flags & 0b01111000; //filter only size flags -- if present we must check all of them. if not, do not check size at all
 
@@ -221,6 +251,7 @@ instruction_t parse_instruction(parser_t *parser, int opcode, uint8_t operand_1_
 
 	if(operand_2_flags & OP_INVALID) {
 		operand_t invalid_op;
+		memset(&invalid_op, 0, sizeof(operand_t));
 		invalid_op.flags = OP_INVALID;
 		instr.operand_2 = invalid_op;
 		return instr;
@@ -286,6 +317,9 @@ instruction_t parse_line(parser_t *parser) {
 		case K_DIV:
 		case K_IDIV:
 			return parse_instruction(parser, keyword, OP_REGISTER, OP_INVALID);
+		case K_PUSH:
+		case K_POP:
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_16BIT | OP_32BIT | OP_64BIT, OP_INVALID);
 		case K_SYSCALL:
 		case K_RET:
 			return parse_no_operands(parser, keyword);

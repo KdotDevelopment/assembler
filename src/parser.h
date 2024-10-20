@@ -16,12 +16,12 @@
 typedef struct operand_t {
     uint8_t flags;
     union {
-        uint8_t reg; //also base for memory
+        int reg; //also base for memory
         int64_t intlit;
     };
-    int64_t mem_offset; // -X[reg] (includes sign) (aka mem displacement)
-    int64_t mem_scale;  //   [reg * X] (includes sign)
-    uint8_t index_reg;
+    int64_t mem_displacement; // -X[reg] (includes sign)
+    uint8_t mem_scale;        // [reg * X] (includes sign)
+    int index_reg; // disp_reg[reg]
     uint8_t size; //size in bytes of this operand
 } operand_t;
 

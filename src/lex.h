@@ -29,6 +29,7 @@ enum {
     T_PERIOD,
 	T_LBRACKET,
     T_RBRACKET,
+    T_STAR,
     T_COMMA,
     T_COLON,
     T_SEMICOLON,
@@ -69,7 +70,13 @@ enum {
     
     //Opcodes
     K_MOV, //69
+    K_MOVZX,
 
+    K_PUSH,
+    K_POP,
+    K_RET,
+    K_SYSCALL,
+    
     //Shared
     K_ADD,
     K_OR,
@@ -94,8 +101,8 @@ enum {
     K_SETB,  //below (synonyms: setnae, setc)
     K_SETNB, //not below (synonyms: setae, setnc)
     K_SETZ,  //zero (synonym: sete)
-    K_SETNZ, //not zero (synontm: setne)
-    K_SETBE, //below or equal (synontm: setna)
+    K_SETNZ, //not zero (synonym: setne)
+    K_SETBE, //below or equal (synonym: setna)
     K_SETA,  //above (synonym: setnbe)
     K_SETS,  //sign
     K_SETNS, //not sign
@@ -111,8 +118,8 @@ enum {
     K_JB,  //below (synonyms: jnae, jc)
     K_JNB, //not below (synonyms: jae, jnc)
     K_JZ,  //zero (synonym: je)
-    K_JNZ, //not zero (synontm: jne)
-    K_JBE, //below or equal (synontm: jna)
+    K_JNZ, //not zero (synonym: jne)
+    K_JBE, //below or equal (synonym: jna)
     K_JA,  //above (synonym: jnbe)
     K_JS,  //sign
     K_JNS, //not sign
@@ -122,13 +129,8 @@ enum {
     K_JGE, //greater or equal (synonym: jnl)
     K_JLE, //less or equal (synonym: jng)
     K_JG,  //greater (synonym: jnle)
-    
-    K_MOVZX,
+
     K_CALL,
-    K_PUSH,
-    K_POP,
-    K_RET,
-    K_SYSCALL,
 
     //Types
     K_BYTE,
