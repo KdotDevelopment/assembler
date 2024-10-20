@@ -650,7 +650,6 @@ void gen_label_offset(machine_instruction_t machine_instr, instruction_t *instru
         int32_t offset = address - (code_gen->byte_pos + 3); //+ 3 is <32bit offset> - 1
         if(machine_instr.flags & F_TWO_BYTE) offset -= 1; //must go back one more
         fwrite(&offset, sizeof(offset), 1, code_gen->out);
-        printf("%d\n", address);
 
         code_gen->byte_pos += sizeof(offset);
     }
