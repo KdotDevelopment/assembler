@@ -237,8 +237,10 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
 	else if(!strcmp(token->ident_value, "jng")) token->keyword = K_JLE;
 	else if(!strcmp(token->ident_value, "jg")) token->keyword = K_JG;
 	else if(!strcmp(token->ident_value, "jnle")) token->keyword = K_JG;
+	else if(!strcmp(token->ident_value, "jmp")) token->keyword = K_JMP;
 
     else if(!strcmp(token->ident_value, "call")) token->keyword = K_CALL;
+	
     else if(!strcmp(token->ident_value, "BYTE")) token->keyword = K_BYTE;
     else if(!strcmp(token->ident_value, "WORD")) token->keyword = K_WORD;
     else if(!strcmp(token->ident_value, "DWORD")) token->keyword = K_DWORD;

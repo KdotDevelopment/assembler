@@ -48,6 +48,7 @@ uint8_t get_size_index(uint8_t size) {
 
 void gen_syscall(code_gen_t *code_gen) {
     fwrite(&syscall_bytes, sizeof(syscall_bytes), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(syscall_bytes);
 }
 
 //returns uint8 with mask 0b00111000
@@ -72,11 +73,13 @@ void gen_prefix(instruction_t *instruction, code_gen_t *code_gen) {
     if(instruction->operand_1.flags & OP_MEMORY && get_register_size(instruction->operand_1.reg) == 4) {
         prefix = 0x67;
         fwrite(&prefix, sizeof(prefix), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(prefix);
     }
     if(instruction->operand_2.flags & OP_MEMORY && get_register_size(instruction->operand_2.reg) == 4) {
         if(prefix != 0x67) {
             prefix = 0x67;
             fwrite(&prefix, sizeof(prefix), 1, code_gen->out);
+            code_gen->byte_pos += sizeof(prefix);
         }
     }
 
@@ -84,6 +87,7 @@ void gen_prefix(instruction_t *instruction, code_gen_t *code_gen) {
     if(instruction->operand_1.size == 2 || instruction->operand_2.size == 2) {
         uint8_t prefix = 0x66;
         fwrite(&prefix, sizeof(prefix), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(prefix);
         if(!is_extended_register(instruction->operand_2.reg)) return;
     }
 }
@@ -131,6 +135,7 @@ void gen_rex(instruction_t *instruction, code_gen_t *code_gen) {
 
     if (rex != 0b01000000) {
         fwrite(&rex, sizeof(rex), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(rex);
     }
 }
 
@@ -207,15 +212,18 @@ uint8_t gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *co
         }
 
         fwrite(&modrm, sizeof(modrm), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(modrm);
 
         if(get_register_number(current_instr.operand_1.reg) == 5 && current_instr.operand_1.mem_displacement == 0 && current_instr.operand_1.flags & OP_MEMORY) {
             uint8_t zero = 0;
             fwrite(&zero, sizeof(zero), 1, code_gen->out);
+            code_gen->byte_pos += sizeof(zero);
         }
 
         if(get_register_number(current_instr.operand_2.reg) == 5 && current_instr.operand_2.mem_displacement == 0 && current_instr.operand_2.flags & OP_MEMORY) {
             uint8_t zero = 0;
             fwrite(&zero, sizeof(zero), 1, code_gen->out);
+            code_gen->byte_pos += sizeof(zero);
         }
 
         return modrm;
@@ -237,6 +245,7 @@ uint8_t gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *co
     }
 
     fwrite(&modrm, sizeof(modrm), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(modrm);
     //printf("modrm: %d\n", modrm);
 
     return modrm;
@@ -296,9 +305,11 @@ void gen_sib(instruction_t *instruction, code_gen_t *code_gen) {
     //printf("sib: %d\n", sib);
 
     fwrite(&sib, sizeof(sib), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(sib);
     if(gen_zero_disp) {
         uint32_t zeros = 0;
         fwrite(&zeros, sizeof(zeros), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(zeros);
     }
 }
 
@@ -307,15 +318,24 @@ void gen_displacement(instruction_t *instruction, code_gen_t *code_gen) {
     if(instruction->operand_1.mem_displacement > 0 || instruction->operand_1.mem_displacement < 0) displacement = instruction->operand_1.mem_displacement;
     if(instruction->operand_2.mem_displacement > 0 || instruction->operand_2.mem_displacement < 0) displacement = instruction->operand_2.mem_displacement;
 
-    fwrite(&displacement, get_int_size(displacement), 1, code_gen->out);
+    uint8_t size = get_int_size(displacement);
+    if(size == 0) size = 1;
+    fwrite(&displacement, size, 1, code_gen->out);
+    code_gen->byte_pos += size;
 }
 
 void gen_from_instruction(machine_instruction_t *machine_code, instruction_t *instruction, code_gen_t *code_gen) {
     uint8_t opcode;
     opcode = machine_code->opcode;
     if(machine_code->flags & F_ADD_REG) opcode |= get_register_number(instruction->operand_1.reg);
-    if(machine_code->flags & F_TWO_BYTE) fwrite(&two_byte_opcode, sizeof(two_byte_opcode), 1, code_gen->out);
+    if(machine_code->flags & F_TWO_BYTE) {
+        fwrite(&two_byte_opcode, sizeof(two_byte_opcode), 1, code_gen->out);
+        code_gen->byte_pos += sizeof(two_byte_opcode);
+    }
+
     fwrite(&opcode, sizeof(opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(opcode);
+
     uint8_t modrm = 0;
     if(machine_code->flags & F_MODRM) modrm = gen_modrm(instruction, machine_code->flags & F_REG_OPCODE, code_gen);
     if(instruction->operand_1.index_reg > 0 || instruction->operand_1.mem_scale > 1) machine_code->flags |= F_SIB;
@@ -381,15 +401,18 @@ void gen_mov(instruction_t *instruction, code_gen_t *code_gen) {
             case 1:
                 intlit = (int8_t)intlit;
                 fwrite(&intlit, size, 1, code_gen->out);
+                code_gen->byte_pos += size;
                 break;
             case 2:
                 intlit = (int16_t)intlit;
                 fwrite(&intlit, size, 1, code_gen->out);
+                code_gen->byte_pos += size;
                 break;
             case 4:
             case 8: //just because its 8 doesnt mean we put all 8 bytes in -- max 4
                 intlit = (int32_t)intlit;
                 fwrite(&intlit, size, 1, code_gen->out);
+                code_gen->byte_pos += size;
                 break;
         }
     }
@@ -451,18 +474,22 @@ void gen_arith(instruction_t *instruction, code_gen_t *code_gen) {
         int64_t intlit = instruction->operand_2.intlit;
         uint8_t int_size = get_int_size(intlit);
         switch(int_size) {
+            case 0:
             case 1:
                 intlit = (int8_t)intlit;
                 fwrite(&intlit, 1, 1, code_gen->out);
+                code_gen->byte_pos++;
                 break;
             case 2:
                 intlit = (int16_t)intlit;
                 fwrite(&intlit, 2, 1, code_gen->out);
+                code_gen->byte_pos += 2;
                 break;
             case 4:
             case 8:
                 intlit = (int32_t)intlit;
                 fwrite(&intlit, 4, 1, code_gen->out);
+                code_gen->byte_pos += 4;
                 break;
         }
     }
@@ -497,18 +524,22 @@ void gen_arith_2(instruction_t *instruction, code_gen_t *code_gen) {
         int64_t intlit = instruction->operand_2.intlit;
         uint8_t int_size = get_int_size(intlit);
         switch(int_size) {
+            case 0:
             case 1:
                 intlit = (int8_t)intlit;
                 fwrite(&intlit, 1, 1, code_gen->out);
+                code_gen->byte_pos++;
                 break;
             case 2:
                 intlit = (int16_t)intlit;
                 fwrite(&intlit, 2, 1, code_gen->out);
+                code_gen->byte_pos += 2;
                 break;
             case 4:
             case 8:
                 intlit = (int32_t)intlit;
                 fwrite(&intlit, 4, 1, code_gen->out);
+                code_gen->byte_pos += 4;
                 break;
         }
     }
@@ -525,6 +556,7 @@ void gen_set(instruction_t *instruction, code_gen_t *code_gen) {
 
 void gen_ret(code_gen_t *code_gen) {
     fwrite(&ret_opcode, sizeof(ret_opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(ret_opcode);
 }
 
 void gen_movzx(instruction_t *instruction, code_gen_t *code_gen) {
@@ -562,12 +594,109 @@ void gen_lea(instruction_t *instruction, code_gen_t *code_gen) {
     gen_from_instruction(&lea_mem, instruction, code_gen);
 }
 
+void handle_label_decl(instruction_t *instruction, code_gen_t *code_gen) {
+    int symbol_index = find_symbol(instruction->operand_1.label_name, code_gen->parser->symbol_table);
+    if(symbol_index == -1) {
+        printf("An error has occured when processing label symbols\n");
+    }
+
+    symbol_entry_t *symbol = code_gen->parser->symbol_table->table[symbol_index];
+
+    symbol->address = code_gen->byte_pos;
+
+    for(int i = 0; i < code_gen->unresolved_next_free; i++) {
+        unresolved_label_t *label = code_gen->unresolved_labels[i];
+        if(label->symbol == symbol) {
+            uint64_t current_pos = code_gen->byte_pos + 0x1000;
+
+            fseek(code_gen->out, label->file_pos, 0);
+
+            int32_t offset = symbol->address - (label->file_pos - 0x1000 + 4); //+ 4 is + <32bit offset>
+            
+            fwrite(&offset, sizeof(offset), 1, code_gen->out);
+            
+            fseek(code_gen->out, 0, SEEK_END);
+        }
+    }
+}
+
+void gen_label_offset(machine_instruction_t machine_instr, instruction_t *instruction, operand_t *operand, code_gen_t *code_gen) {
+    int symbol_index = find_symbol(operand->label_name, code_gen->parser->symbol_table);
+    if(symbol_index == -1) {
+        printf("Label %s on line %ld has not been defined in this program\n", operand->label_name, instruction->line_num);
+    }
+
+    int32_t address = code_gen->parser->symbol_table->table[symbol_index]->address;
+    
+    if(address == -1) {
+        //this means the label isn't before this instruction, so the address hasn't been determined yet
+        //now we must remember this and come back to it once the label is defined
+        
+        if(code_gen->unresolved_next_free++ > code_gen->unresolved_label_size) {
+            code_gen->unresolved_label_size += 256;
+            code_gen->unresolved_labels = (unresolved_label_t **)realloc(code_gen->unresolved_labels, code_gen->unresolved_label_size * sizeof(unresolved_label_t *));
+        }
+        
+        unresolved_label_t *label = (unresolved_label_t *)malloc(sizeof(unresolved_label_t));
+        label->file_pos = 0x1000 + code_gen->byte_pos; //0x1000 is where the machine code starts in the ELF file, the jmp opcode is already accounted for
+        label->symbol = code_gen->parser->symbol_table->table[symbol_index];
+        code_gen->unresolved_labels[code_gen->unresolved_next_free - 1] = label;
+
+        int32_t offset = 0xFFFFFFFF;
+        fwrite(&offset, sizeof(offset), 1, code_gen->out);
+
+        code_gen->byte_pos += sizeof(offset);
+    }else {
+        int32_t offset = address - (code_gen->byte_pos + 3); //+ 3 is <32bit offset> - 1
+        if(machine_instr.flags & F_TWO_BYTE) offset -= 1; //must go back one more
+        fwrite(&offset, sizeof(offset), 1, code_gen->out);
+        printf("%d\n", address);
+
+        code_gen->byte_pos += sizeof(offset);
+    }
+}
+
+void gen_jmp(instruction_t *instruction, code_gen_t *code_gen) {
+    fwrite(&jmp_opcode.opcode, sizeof(jmp_opcode.opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(jmp_opcode.opcode);
+    
+    gen_label_offset(jmp_opcode, instruction, &instruction->operand_1, code_gen);
+}
+
+void gen_call(instruction_t *instruction, code_gen_t *code_gen) {
+    fwrite(&call_opcode.opcode, sizeof(call_opcode.opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(call_opcode.opcode);
+    
+    gen_label_offset(call_opcode, instruction, &instruction->operand_1, code_gen);
+}
+
+void gen_jmp_compare(instruction_t *instruction, code_gen_t *code_gen) {
+    machine_instruction_t instr;
+
+    instr = jmp_compare;
+    instr.opcode += instruction->opcode - K_JO; //adds appropriate val to 0F80, keyword enum is in right order
+    
+    fwrite(&two_byte_opcode, sizeof(two_byte_opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(two_byte_opcode);
+    fwrite(&instr.opcode, sizeof(instr.opcode), 1, code_gen->out);
+    code_gen->byte_pos += sizeof(instr.opcode);
+    
+    gen_label_offset(jmp_compare, instruction, &instruction->operand_1, code_gen);
+}
+
 //TODO: symbol table, jmp, jX (synonyms), call
 void generate_code(code_gen_t *code_gen) {
+    code_gen->unresolved_label_size = 128;
+    code_gen->unresolved_next_free = 0;
+    code_gen->unresolved_labels = (unresolved_label_t **)malloc(sizeof(unresolved_label_t) * code_gen->unresolved_label_size);
+
     for(int i = 0; i < code_gen->parser->instruction_index; i++) {
         instruction_t *current_instruction = code_gen->parser->instructions[i];
 
         switch(current_instruction->opcode) {
+            case K_LABEL:
+                handle_label_decl(current_instruction, code_gen);
+                break;
             case K_MOV:
                 gen_mov(current_instruction, code_gen);
                 break;
@@ -578,6 +707,7 @@ void generate_code(code_gen_t *code_gen) {
                 gen_lea(current_instruction, code_gen);
                 break;
             case K_ADD:
+            case K_XOR:
             case K_OR:
             case K_ADC:
             case K_SBB:
@@ -612,6 +742,30 @@ void generate_code(code_gen_t *code_gen) {
             case K_SETLE:
             case K_SETG:
                 gen_set(current_instruction, code_gen);
+                break;
+            case K_JMP:
+                gen_jmp(current_instruction, code_gen);
+                break;
+            case K_JO:
+            case K_JNO:
+            case K_JB:
+            case K_JNB:
+            case K_JZ:
+            case K_JNZ:
+            case K_JBE:
+            case K_JA:
+            case K_JS:
+            case K_JNS:
+            case K_JP:
+            case K_JNP:
+            case K_JL:
+            case K_JGE:
+            case K_JLE:
+            case K_JG:
+                gen_jmp_compare(current_instruction, code_gen);
+                break;
+            case K_CALL:
+                gen_call(current_instruction, code_gen);
                 break;
             case K_PUSH:
                 gen_push(current_instruction, code_gen);

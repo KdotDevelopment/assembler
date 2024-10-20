@@ -41,7 +41,8 @@ enum {
 
 //Keywords
 enum {
-	K_IDENT, //This is for user-made variable names
+    K_LABEL = -2,
+	K_IDENT = 0, //This is for user-made variable names
 
     //64-bit registers (1 - 16)
     K_RAX, K_RCX, K_RDX, K_RBX,
@@ -130,6 +131,7 @@ enum {
     K_JGE, //greater or equal (synonym: jnl)
     K_JLE, //less or equal (synonym: jng)
     K_JG,  //greater (synonym: jnle)
+    K_JMP,
 
     K_CALL,
 

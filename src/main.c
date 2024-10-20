@@ -7,6 +7,7 @@
 #include "lex.h"
 #include "parser.h"
 #include "gen.h"
+#include "symbol.h"
 
 char buffer[24];
 char *get_file_name(char *full_name) {
@@ -97,8 +98,14 @@ int main(int argc, char *argv[]) {
     //make the machine code
     lex(&lexer);
 
+    symbol_table_t symbol_table;
+    symbol_table.table_size = 256;
+    symbol_table.table = (symbol_entry_t **)malloc(symbol_table.table_size * sizeof(symbol_entry_t));
+    symbol_table.instruction_pointer = 0;
+
     parser_t parser;
     parser.lexer = &lexer;
+    parser.symbol_table = &symbol_table;
 
     parse(&parser);
 
@@ -106,6 +113,7 @@ int main(int argc, char *argv[]) {
     code_gen.parser = &parser;
     code_gen.out = lexer.out_file;
     code_gen.instruction_pos = 0;
+    code_gen.byte_pos = 0;
 
     //fwrite(machine_code, sizeof(machine_code), 1, lexer.out_file);
 

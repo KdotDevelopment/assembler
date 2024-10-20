@@ -141,7 +141,7 @@ uint8_t parse_size_modifier(parser_t *parser) {
 
 //Flags: OP_REGISTER, OP_INTLIT, OP_MEMORY
 //Use like OP_REGISTER | OP_INTLIT to accept both register and integer literal
-operand_t parse_operand(parser_t *parser, uint8_t flags) {
+operand_t parse_operand(parser_t *parser, uint16_t flags) {
 	operand_t operand;
 	memset(&operand, 0, sizeof(operand_t));
 
@@ -150,15 +150,25 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 
 	token_t *token = parser->lexer->tokens[parser->pos];
 
-	uint8_t flag_register = flags & OP_REGISTER;
-	uint8_t flag_intlit = (flags & OP_INTLIT) >> 1;
-	uint8_t flag_memory = (flags & OP_MEMORY) >> 2;
+	uint16_t flag_register = flags & OP_REGISTER;
+	uint16_t flag_intlit = (flags & OP_INTLIT) >> 1;
+	uint16_t flag_memory = (flags & OP_MEMORY) >> 2;
+	uint16_t flag_label = (flags & OP_LABEL) >> 3;
 
 	if((operand = memory_operand(parser)).flags != OP_INVALID) {
 		if(!flag_memory) {
 			printf("Invalid memory operand and opcode combination on line %d\n", token->line_num);
 			exit(1);
 		}
+		operand.size = 4; //address is 4 bytes
+	}else if(token->keyword == K_IDENT) {
+		if(!flag_label) {
+			printf("Invalid label operand and opcode combination on line %d\n", token->line_num);
+			exit(1);
+		}
+		memset(&operand, 0, sizeof(operand));
+		operand.flags = OP_LABEL;
+		operand.label_name = token->ident_value;
 		operand.size = force_size;
 	}else if(token->keyword >= K_RAX && token->keyword <= K_R15B) {
 		if(!flag_register) {
@@ -201,6 +211,14 @@ void require_newline(parser_t *parser) {
 	parser->pos++;
 }
 
+void require_colon(parser_t *parser) {
+	if(parser->lexer->tokens[parser->pos]->token != T_COLON) {
+		printf("Excepted colon after identifier on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	parser->pos++;
+}
+
 instruction_t parse_no_operands(parser_t *parser, int opcode) {
 	instruction_t instr;
 
@@ -213,10 +231,10 @@ instruction_t parse_no_operands(parser_t *parser, int opcode) {
 	return instr;
 }
 
-void is_operand_valid(parser_t *parser, operand_t *operand, uint8_t flags) {
+void is_operand_valid(parser_t *parser, operand_t *operand, uint16_t flags) {
 	if(operand->size == 0) set_operand_size(operand);
 	uint8_t size = operand->size;
-	uint8_t must_check = flags & 0b01111000; //filter only size flags -- if present we must check all of them. if not, do not check size at all
+	uint8_t must_check = flags & 0b11110000; //filter only size flags -- if present we must check all of them. if not, do not check size at all
 
 	if(!must_check) return;
 
@@ -238,12 +256,12 @@ void is_operand_valid(parser_t *parser, operand_t *operand, uint8_t flags) {
 	}
 }
 
-instruction_t parse_instruction(parser_t *parser, int opcode, uint8_t operand_1_flags, uint8_t operand_2_flags) {
+instruction_t parse_instruction(parser_t *parser, int opcode, uint16_t operand_1_flags, uint16_t operand_2_flags) {
 	instruction_t instr;
 
 	instr.opcode = opcode;
 	parser->pos++; //past opcode
-	instr.operand_1 = parse_operand(parser, operand_1_flags & 0b00000111); //last three bits are reg, mem, imm, rest are amount of bits
+	instr.operand_1 = parse_operand(parser, operand_1_flags & 0b00001111); //last three bits are reg, mem, imm, label, rest are amount of bits
 
 	is_operand_valid(parser, &instr.operand_1, operand_1_flags);
 
@@ -258,11 +276,35 @@ instruction_t parse_instruction(parser_t *parser, int opcode, uint8_t operand_1_
 	}
 
 	require_comma(parser);
-	instr.operand_2 = parse_operand(parser, operand_2_flags & 0b00000111); //last three bits are reg, mem, imm, rest are amount of bits
+	instr.operand_2 = parse_operand(parser, operand_2_flags & 0b00001111); //last four bits are reg, mem, imm, label, rest are amount of bits
 
 	is_operand_valid(parser, &instr.operand_2, operand_2_flags);
 
 	parser->pos++;
+
+	return instr;
+}
+
+//we are going to create the symbol now as a first pass
+instruction_t parse_identifier(parser_t *parser) {
+	instruction_t instr;
+
+	instr.opcode = -2;
+
+	if(find_symbol(parser->lexer->tokens[parser->pos]->ident_value, parser->symbol_table) != -1) {
+		printf("Label name \"%s\" on line %d already exists\n", parser->lexer->tokens[parser->pos]->ident_value, parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+
+	create_symbol(parser->lexer->tokens[parser->pos]->ident_value, -1, parser->symbol_table);
+
+	operand_t operand;
+	operand.label_name = parser->lexer->tokens[parser->pos]->ident_value;
+	operand.flags = OP_LABEL;
+	instr.operand_1 = operand;
+
+	parser->pos++; //past the identifier
+	require_colon(parser);
 
 	return instr;
 }
@@ -290,6 +332,7 @@ instruction_t parse_line(parser_t *parser) {
 		case K_SBB:
 		case K_AND:
 		case K_SUB:
+		case K_XOR:
 		case K_CMP:
 			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY, OP_REGISTER | OP_MEMORY | OP_INTLIT);
 		case K_SETO:
@@ -309,6 +352,25 @@ instruction_t parse_line(parser_t *parser) {
 		case K_SETLE:
 		case K_SETG:
 			return parse_instruction(parser, keyword, OP_REGISTER | OP_8BIT, OP_INVALID);
+		case K_JMP:
+		case K_JO:
+		case K_JNO:
+		case K_JB:
+		case K_JNB:
+		case K_JZ:
+		case K_JNZ:
+		case K_JBE:
+		case K_JA:
+		case K_JS:
+		case K_JNS:
+		case K_JP:
+		case K_JNP:
+		case K_JL:
+		case K_JGE:
+		case K_JLE:
+		case K_JG:
+		case K_CALL:
+			return parse_instruction(parser, keyword, OP_LABEL, OP_INVALID);
 		case K_TEST:
 			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY, OP_INTLIT);
 		case K_NEG:
@@ -326,7 +388,7 @@ instruction_t parse_line(parser_t *parser) {
 		case K_RET:
 			return parse_no_operands(parser, keyword);
 		case K_IDENT:
-			parser->pos++;
+			return parse_identifier(parser);
 			break;
 		default:
 			printf("Invalid opcode \"%s\" on line %d\n", parser->lexer->tokens[parser->pos]->ident_value, parser->lexer->tokens[parser->pos]->line_num);
@@ -338,16 +400,17 @@ void parse(parser_t *parser) {
     size_t max_instruction_count = 128;
 	parser->pos = 0;
 	parser->instructions = (instruction_t **)malloc(max_instruction_count * sizeof(instruction_t *));
+	memset(parser->instructions, 0, max_instruction_count * sizeof(instruction_t *));
 
 	//instruction_t current_instruction;
 
-	//get after "main:"
-	while(strcmp(parser->lexer->tokens[parser->pos]->ident_value, "main") != 0 || parser->lexer->tokens[parser->pos + 1]->token != T_COLON) {
+	//get to the first label
+	while(strcmp(parser->lexer->tokens[parser->pos]->ident_value, "text") != 0) {
 		parser->pos++;
 	}
 
-	parser->pos++; //past main
-	parser->pos++; //past :
+	//parser->pos++; //past main
+	//parser->pos++; //past :
 	parser->pos++; //past \n
 
 	//this begins the instruction part
@@ -357,7 +420,7 @@ void parse(parser_t *parser) {
 			while(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) parser->pos++;
 		}
 		if(parser->instruction_index > max_instruction_count) {
-			max_instruction_count *= 2;
+			max_instruction_count += 256;
 			parser->instructions = (instruction_t **)realloc(parser->instructions, max_instruction_count * sizeof(instruction_t *));
 		}
 		//memset(&current_instruction, 0, sizeof(current_instruction));
