@@ -171,7 +171,7 @@ operand_t parse_operand(parser_t *parser, uint8_t flags) {
 		operand.size = force_size;
 	}else if(token->token == T_INTLIT) {
 		if(!flag_intlit) {
-			printf("Invalid intlit operand %d and opcode combination on line %d\n", token->int_value, token->line_num);
+			printf("Invalid imm operand %d and opcode combination on line %d\n", token->int_value, token->line_num);
 			exit(1);
 		}
 		memset(&operand, 0, sizeof(operand));
@@ -281,6 +281,8 @@ instruction_t parse_line(parser_t *parser) {
 	switch(keyword) {
 		case K_MOVZX:
 			return parse_instruction(parser, keyword, OP_REGISTER | OP_MEMORY | OP_16BIT | OP_32BIT | OP_64BIT, OP_REGISTER | OP_MEMORY | OP_8BIT | OP_16BIT);
+		case K_LEA:
+			return parse_instruction(parser, keyword, OP_REGISTER | OP_16BIT | OP_32BIT | OP_64BIT, OP_MEMORY);
 		case K_MOV:
 		case K_ADD:
 		case K_OR:

@@ -83,6 +83,8 @@ static machine_instruction_t arith_2_16 = { 0xF7, F_MODRM | F_REG_OPCODE };
 static machine_instruction_t push_reg = { 0x50, F_ADD_REG };
 static machine_instruction_t pop_reg = { 0x58, F_ADD_REG };
 
+static machine_instruction_t lea_mem = { 0x8D, F_MODRM };
+
 //2-byte opcodes:
 static uint8_t two_byte_opcode = 0x0F;
 static machine_instruction_t set_reg = { 0x90, F_MODRM | F_TWO_BYTE };

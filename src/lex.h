@@ -69,14 +69,15 @@ enum {
     K_R12B, K_R13B, K_R14B, K_R15B,
     
     //Opcodes
-    K_MOV, //69
+    K_MOV,
     K_MOVZX,
+    K_LEA,
 
     K_PUSH,
     K_POP,
     K_RET,
     K_SYSCALL,
-    
+
     //Shared
     K_ADD,
     K_OR,

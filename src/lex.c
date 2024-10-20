@@ -152,6 +152,7 @@ void get_keyword(token_t *token) { //takes the ident string and converts it to a
     
     else if(!strcmp(token->ident_value, "mov")) token->keyword = K_MOV;
 	else if(!strcmp(token->ident_value, "movzx")) token->keyword = K_MOVZX;
+	else if(!strcmp(token->ident_value, "lea")) token->keyword = K_LEA;
 
 	else if(!strcmp(token->ident_value, "push")) token->keyword = K_PUSH;
     else if(!strcmp(token->ident_value, "pop")) token->keyword = K_POP;

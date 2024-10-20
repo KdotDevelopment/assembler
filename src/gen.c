@@ -135,7 +135,7 @@ void gen_rex(instruction_t *instruction, code_gen_t *code_gen) {
 }
 
 //writes Mod-reg-r/m byte    reg_opcode = if opcode can mean multiple things
-void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_gen) {
+uint8_t gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_gen) {
     uint8_t modrm = 0b00000000; // [0 0] MOD, [0 0 0] Reg/Opcode, [0 0 0] R/M
 
     instruction_t current_instr = *instruction;
@@ -143,19 +143,20 @@ void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_
     //memory with no displacement
     if(current_instr.operand_1.flags & OP_MEMORY) {
         modrm |= 0b00000000; //keep first two zero, basically
-        if(current_instr.operand_1.index_reg != 0) {
+        if(current_instr.operand_1.index_reg != 0 || current_instr.operand_1.mem_scale > 1) {
             modrm |= 0b100; //sib byte follows
         }
     }
 
     if(current_instr.operand_2.flags & OP_MEMORY) {
         modrm |= 0b00000000; //keep first two zero, basically
-        if(current_instr.operand_2.index_reg != 0) {
+        if(current_instr.operand_2.index_reg != 0 || current_instr.operand_2.mem_scale > 1) {
             modrm |= 0b100; //sib byte follows
         }
     }
 
-    if(get_int_size(current_instr.operand_2.mem_displacement) == 1) {
+    //must also check for xBP registers because technically they have a displacement of zero
+    if(get_int_size(current_instr.operand_2.mem_displacement) == 1 || (get_register_number(current_instr.operand_2.reg) == 5 && current_instr.operand_2.mem_displacement == 0 && current_instr.operand_2.flags & OP_MEMORY)) {
         modrm |= 0b01000000;
     }
 
@@ -163,7 +164,8 @@ void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_
         modrm |= 0b10000000;
     }
 
-    if(get_int_size(current_instr.operand_1.mem_displacement) == 1) {
+    //must also check for xBP registers because technically they have a displacement of zero
+    if(get_int_size(current_instr.operand_1.mem_displacement) == 1 || (get_register_number(current_instr.operand_1.reg) == 5 && current_instr.operand_1.mem_displacement == 0 && current_instr.operand_1.flags & OP_MEMORY)) {
         modrm |= 0b01000000;
     }
 
@@ -176,7 +178,7 @@ void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_
         exit(1);
     }
 
-    if(current_instr.operand_1.flags & OP_REGISTER && !(modrm & 0b10000000 || modrm & 0b01000000)) {
+    if(current_instr.operand_1.flags & OP_REGISTER && !(current_instr.operand_2.flags & OP_MEMORY)) {
         modrm |= 0b11000000;
     }
 
@@ -198,13 +200,25 @@ void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_
         }
 
         //Memory operand must always go in the R/M slot
-        if(!(modrm & 0b100)) {
+        if(reg_opcode) {
+            modrm |= gen_reg_opcode(&current_instr);
+        }else if(!(modrm & 0b100)) {
             modrm |= (get_register_number(mem_operand.reg));
         }
 
         fwrite(&modrm, sizeof(modrm), 1, code_gen->out);
 
-        return;
+        if(get_register_number(current_instr.operand_1.reg) == 5 && current_instr.operand_1.mem_displacement == 0 && current_instr.operand_1.flags & OP_MEMORY) {
+            uint8_t zero = 0;
+            fwrite(&zero, sizeof(zero), 1, code_gen->out);
+        }
+
+        if(get_register_number(current_instr.operand_2.reg) == 5 && current_instr.operand_2.mem_displacement == 0 && current_instr.operand_2.flags & OP_MEMORY) {
+            uint8_t zero = 0;
+            fwrite(&zero, sizeof(zero), 1, code_gen->out);
+        }
+
+        return modrm;
     }
 
     //src
@@ -224,6 +238,8 @@ void gen_modrm(instruction_t *instruction, uint8_t reg_opcode, code_gen_t *code_
 
     fwrite(&modrm, sizeof(modrm), 1, code_gen->out);
     //printf("modrm: %d\n", modrm);
+
+    return modrm;
 }
 
 void gen_sib(instruction_t *instruction, code_gen_t *code_gen) {
@@ -236,6 +252,8 @@ void gen_sib(instruction_t *instruction, code_gen_t *code_gen) {
     }
 
     operand_t operand;
+
+    uint8_t gen_zero_disp = 0; //should it generate all zero displacement?
 
     if(instruction->operand_1.flags & OP_MEMORY) operand = instruction->operand_1;
     if(instruction->operand_2.flags & OP_MEMORY) operand = instruction->operand_2;
@@ -266,11 +284,22 @@ void gen_sib(instruction_t *instruction, code_gen_t *code_gen) {
     }
 
     //base register
-    sib |= (get_register_number(operand.reg));
+    if(operand.mem_scale > 1 && operand.index_reg == 0) {
+        sib |= 0b101;
+        sib &= (0b11000111);
+        sib |= (get_register_number(operand.reg) << 3);
+        gen_zero_disp = operand.mem_displacement ? 0 : 1;
+    }else {
+        sib |= (get_register_number(operand.reg));
+    }
 
     //printf("sib: %d\n", sib);
 
     fwrite(&sib, sizeof(sib), 1, code_gen->out);
+    if(gen_zero_disp) {
+        uint32_t zeros = 0;
+        fwrite(&zeros, sizeof(zeros), 1, code_gen->out);
+    }
 }
 
 void gen_displacement(instruction_t *instruction, code_gen_t *code_gen) {
@@ -287,8 +316,11 @@ void gen_from_instruction(machine_instruction_t *machine_code, instruction_t *in
     if(machine_code->flags & F_ADD_REG) opcode |= get_register_number(instruction->operand_1.reg);
     if(machine_code->flags & F_TWO_BYTE) fwrite(&two_byte_opcode, sizeof(two_byte_opcode), 1, code_gen->out);
     fwrite(&opcode, sizeof(opcode), 1, code_gen->out);
-    if(machine_code->flags & F_MODRM) gen_modrm(instruction, machine_code->flags & F_REG_OPCODE, code_gen);
-    if(machine_code->flags & F_SIB) gen_sib(instruction, code_gen);
+    uint8_t modrm = 0;
+    if(machine_code->flags & F_MODRM) modrm = gen_modrm(instruction, machine_code->flags & F_REG_OPCODE, code_gen);
+    if(instruction->operand_1.index_reg > 0 || instruction->operand_1.mem_scale > 1) machine_code->flags |= F_SIB;
+    if(instruction->operand_2.index_reg > 0 || instruction->operand_2.mem_scale > 1) machine_code->flags |= F_SIB;
+    if(machine_code->flags & F_SIB || modrm & 0b100) gen_sib(instruction, code_gen);
     if(instruction->operand_1.mem_displacement > 0 || instruction->operand_1.mem_displacement < 0) gen_displacement(instruction, code_gen);
     if(instruction->operand_2.mem_displacement > 0 || instruction->operand_2.mem_displacement < 0) gen_displacement(instruction, code_gen);
 }
@@ -324,19 +356,18 @@ void gen_mov(instruction_t *instruction, code_gen_t *code_gen) {
 
     if(op_1_mem && op_2_reg) {
         machine_instruction_t instr = mov_reg_reg[get_size_index(instruction->operand_2.size)];
-        instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_reg && op_2_mem) {
         machine_instruction_t instr = mov_reg_mem[get_size_index(instruction->operand_1.size)];
-        instr.flags |= F_SIB;
+        //instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_mem && op_2_imm) {
         machine_instruction_t instr = mov_mem_imm[get_size_index(instruction->operand_2.size)];
-        instr.flags |= F_SIB;
+        //instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
@@ -398,21 +429,21 @@ void gen_arith(instruction_t *instruction, code_gen_t *code_gen) {
     if(op_1_mem && op_2_reg) {
         machine_instruction_t instr = arith_reg_reg[get_size_index(instruction->operand_2.size)];
         instr.opcode += (8 * (instruction->opcode - K_ADD));
-        instr.flags |= F_SIB;
+        //instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_reg && op_2_mem) {
         machine_instruction_t instr = arith_reg_mem[get_size_index(instruction->operand_1.size)];
         instr.opcode += (8 * (instruction->opcode - K_ADD));
-        instr.flags |= F_SIB;
+        //instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
     if(op_1_mem && op_2_imm) {
         machine_instruction_t instr = arith_reg_imm[get_size_index(instruction->operand_2.size)];
         instr.opcode += (8 * (instruction->opcode - K_ADD));
-        instr.flags |= F_SIB;
+        //instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
@@ -453,13 +484,11 @@ void gen_arith_2(instruction_t *instruction, code_gen_t *code_gen) {
 
     if(instruction->operand_1.size == 1) {
         machine_instruction_t instr = arith_2_8;
-        if(instruction->operand_1.index_reg > 0) instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
     
     if(instruction->operand_1.size > 1) {
         machine_instruction_t instr = arith_2_16;
-        if(instruction->operand_1.index_reg > 0) instr.flags |= F_SIB;
         gen_from_instruction(&instr, instruction, code_gen);
     }
 
@@ -490,7 +519,7 @@ void gen_set(instruction_t *instruction, code_gen_t *code_gen) {
 
     instr = set_reg;
     instr.opcode += instruction->opcode - K_SETO; //adds appropriate val to 0F90, keyword enum is in right order
-    if(instruction->operand_2.flags & OP_MEMORY) instr.flags |= F_SIB;
+    //if(instruction->operand_2.flags & OP_MEMORY) instr.flags |= F_SIB;
     gen_from_instruction(&instr, instruction, code_gen);
 }
 
@@ -502,7 +531,7 @@ void gen_movzx(instruction_t *instruction, code_gen_t *code_gen) {
     machine_instruction_t instr;
     if(instruction->operand_2.size == 1) instr = movzx_8;
     if(instruction->operand_2.size == 2) instr = movzx_16;
-    if(instruction->operand_2.flags & OP_MEMORY) instr.flags |= F_SIB;
+    //if(instruction->operand_2.flags & OP_MEMORY) instr.flags |= F_SIB;
     
     //for some reason, the movzx MODRM is flipped around?????
     operand_t swap_op = instruction->operand_2;
@@ -516,11 +545,21 @@ void gen_movzx(instruction_t *instruction, code_gen_t *code_gen) {
 }
 
 void gen_push(instruction_t *instruction, code_gen_t *code_gen) {
+    gen_prefix(instruction, code_gen);
+    gen_rex(instruction, code_gen);
     gen_from_instruction(&push_reg, instruction, code_gen);
 }
 
 void gen_pop(instruction_t *instruction, code_gen_t *code_gen) {
+    gen_prefix(instruction, code_gen);
+    gen_rex(instruction, code_gen);
     gen_from_instruction(&pop_reg, instruction, code_gen);
+}
+
+void gen_lea(instruction_t *instruction, code_gen_t *code_gen) {
+    gen_prefix(instruction, code_gen);
+    gen_rex(instruction, code_gen);
+    gen_from_instruction(&lea_mem, instruction, code_gen);
 }
 
 //TODO: symbol table, jmp, jX (synonyms), call
@@ -534,6 +573,9 @@ void generate_code(code_gen_t *code_gen) {
                 break;
             case K_MOVZX:
                 gen_movzx(current_instruction, code_gen);
+                break;
+            case K_LEA:
+                gen_lea(current_instruction, code_gen);
                 break;
             case K_ADD:
             case K_OR:
