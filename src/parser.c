@@ -205,7 +205,7 @@ operand_t parse_operand(parser_t *parser, uint16_t flags) {
 			printf("Expected character after single quote on line %d\n", token->line_num);
 			exit(1);
 		}
-		if(strlen(token->ident_value) > 2) {
+		if(strlen(token->ident_value) > 1) {
 			printf("Expected only one character after single quote on line %d\n", token->line_num);
 			exit(1);
 		}

@@ -71,16 +71,16 @@ section .text
     mov rdi, 'H'
     call _print
     mov r8, rax
-    mov rdi, 101
+    mov rdi, 'E'
     call _print
     mov r8, rax
-    mov rdi, 108
+    mov rdi, 'L'
     call _print
     mov r8, rax
-    mov rdi, 108
+    mov rdi, 'L'
     call _print
     mov r8, rax
-    mov rdi, 111
+    mov rdi, 'O'
     call _print
     mov r8, rax
     mov rdi, 10
