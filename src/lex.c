@@ -287,6 +287,9 @@ token_t scan(lexer_t *lexer) {
 		case ';':
 			token.token = T_SEMICOLON;
 			break;
+		case '\'':
+			token.token = T_SINGLE_QUOTE;
+			break;
 		default:
 			if(isdigit(lexer->character)) {
 				token.int_value = scan_int(lexer);

@@ -28,9 +28,6 @@ char *add_file_ext(char *base_name, char *ext) {
 	strncat(new_file_name, ext, sizeof(ext));
 }
 
-// Define the machine code (x86-64)
-uint8_t machine_code[] = { 0x49, 0xC7, 0xC0, 0x09, 0x00, 0x00, 0x00, 0x49, 0x83, 0xC0, 0x0A, 0x49, 0x83, 0xC0, 0x05, 0x4C, 0x89, 0xC7, 0x48, 0xC7, 0xC0, 0x3C, 0x00, 0x00, 0x00 }  ;
-
 int main(int argc, char *argv[]) {
 	if (argc != 2) {
 		printf("Usage: rasm <filename>\n");
@@ -81,8 +78,8 @@ int main(int argc, char *argv[]) {
     prog_header2.p_offset = 0x1000;
     prog_header2.p_vaddr = 0x401000;   // Virtual address (typical base for executables)
     prog_header2.p_paddr = 0x401000;   // Physical address (same for executable)
-    prog_header2.p_filesz = sizeof(machine_code); // File size
-    prog_header2.p_memsz = sizeof(machine_code); // Memory size
+    prog_header2.p_filesz = 1; // File size (not found)
+    prog_header2.p_memsz = 1; // Memory size (not found)
     prog_header2.p_align = 0x0;
 
     // Write the ELF header

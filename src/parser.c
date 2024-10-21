@@ -139,6 +139,30 @@ uint8_t parse_size_modifier(parser_t *parser) {
 	}
 }
 
+void require_comma(parser_t *parser) {
+	if(parser->lexer->tokens[parser->pos]->token != T_COMMA) {
+		printf("Excepted comma after first operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	parser->pos++;
+}
+
+void require_newline(parser_t *parser) {
+	if(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) {
+		printf("Excepted newline on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	parser->pos++;
+}
+
+void require_colon(parser_t *parser) {
+	if(parser->lexer->tokens[parser->pos]->token != T_COLON) {
+		printf("Excepted colon after identifier on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+		exit(1);
+	}
+	parser->pos++;
+}
+
 //Flags: OP_REGISTER, OP_INTLIT, OP_MEMORY
 //Use like OP_REGISTER | OP_INTLIT to accept both register and integer literal
 operand_t parse_operand(parser_t *parser, uint16_t flags) {
@@ -170,6 +194,30 @@ operand_t parse_operand(parser_t *parser, uint16_t flags) {
 		operand.flags = OP_LABEL;
 		operand.label_name = token->ident_value;
 		operand.size = force_size;
+	}else if(token->token == T_SINGLE_QUOTE) { //character value
+		if(!flag_intlit) {
+			printf("Invalid imm (character) operand %d and opcode combination on line %d\n", token->int_value, token->line_num);
+			exit(1);
+		}
+		parser->pos++;
+		token_t *token = parser->lexer->tokens[parser->pos];
+		if(token->keyword != K_IDENT) {
+			printf("Expected character after single quote on line %d\n", token->line_num);
+			exit(1);
+		}
+		if(strlen(token->ident_value) > 2) {
+			printf("Expected only one character after single quote on line %d\n", token->line_num);
+			exit(1);
+		}
+		memset(&operand, 0, sizeof(operand));
+		operand.intlit = (uint8_t)token->ident_value[0]; //convert first character to uint8 (ascii number)
+		operand.flags = OP_INTLIT;
+		operand.size = force_size;
+		parser->pos++;
+		if(parser->lexer->tokens[parser->pos]->token != T_SINGLE_QUOTE) {
+			printf("Excepted single quote after character on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
+			exit(1);
+		}
 	}else if(token->keyword >= K_RAX && token->keyword <= K_R15B) {
 		if(!flag_register) {
 			printf("Invalid register operand \"%s\" and opcode combination on line %d\n", token->ident_value, token->line_num);
@@ -193,30 +241,6 @@ operand_t parse_operand(parser_t *parser, uint16_t flags) {
 		exit(1);
 	}
 	return operand;
-}
-
-void require_comma(parser_t *parser) {
-	if(parser->lexer->tokens[parser->pos]->token != T_COMMA) {
-		printf("Excepted comma after first operand on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
-		exit(1);
-	}
-	parser->pos++;
-}
-
-void require_newline(parser_t *parser) {
-	if(parser->lexer->tokens[parser->pos]->token != T_NEWLINE) {
-		printf("Excepted newline on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
-		exit(1);
-	}
-	parser->pos++;
-}
-
-void require_colon(parser_t *parser) {
-	if(parser->lexer->tokens[parser->pos]->token != T_COLON) {
-		printf("Excepted colon after identifier on line %d\n", parser->lexer->tokens[parser->pos]->line_num);
-		exit(1);
-	}
-	parser->pos++;
 }
 
 instruction_t parse_no_operands(parser_t *parser, int opcode) {

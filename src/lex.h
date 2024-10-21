@@ -33,6 +33,7 @@ enum {
     T_COMMA,
     T_COLON,
     T_SEMICOLON,
+    T_SINGLE_QUOTE,
 	T_INTLIT,
     T_IDENT,
     T_NEWLINE,
