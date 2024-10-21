@@ -29,6 +29,56 @@ void set_operand_size(operand_t *operand) {
 	}
 }
 
+uint8_t parse_character(token_t *token) {
+	uint8_t ascii = 0;
+	if(token->ident_value[0] == '\\') {
+		switch(token->ident_value[1]) {
+			case '\'':
+				ascii = (uint8_t)('\'');
+				break;
+			case '\"':
+				ascii = (uint8_t)('\"');
+				break;
+			case '\\':
+				ascii = (uint8_t)('\\');
+				break;
+			case 'n':
+				ascii = (uint8_t)('\n');
+				break;
+			case 't':
+				ascii = (uint8_t)('\t');
+				break;
+			case 'b':
+				ascii = (uint8_t)('\b');
+				break;
+			case 'f':
+				ascii = (uint8_t)('\f');
+				break;
+			case 'v':
+				ascii = (uint8_t)('\v');
+				break;
+			case '0':
+				ascii = (uint8_t)('\0');
+				break;
+			case 'a':
+				ascii = (uint8_t)('\a');
+				break;
+			case 'e':
+				ascii = (uint8_t)('\e');
+				break;
+			default:
+				printf("Unknown character after escape character on line %d\n", token->line_num);
+				exit(1);
+		}
+	}else if(strlen(token->ident_value) > 1) {
+		printf("Expected only one character after single quote on line %d\n", token->line_num);
+		exit(1);
+	}else {
+		ascii = (uint8_t)token->ident_value[0]; //convert first character to uint8 (ascii number)
+	}
+	return ascii;
+}
+
 //Checks if the next set of tokens represent a memory address token (format -X[reg] or [reg]) and returns an operand if so
 operand_t memory_operand(parser_t *parser) {
 	operand_t operand;
@@ -205,12 +255,8 @@ operand_t parse_operand(parser_t *parser, uint16_t flags) {
 			printf("Expected character after single quote on line %d\n", token->line_num);
 			exit(1);
 		}
-		if(strlen(token->ident_value) > 1) {
-			printf("Expected only one character after single quote on line %d\n", token->line_num);
-			exit(1);
-		}
 		memset(&operand, 0, sizeof(operand));
-		operand.intlit = (uint8_t)token->ident_value[0]; //convert first character to uint8 (ascii number)
+		operand.intlit = parse_character(token);
 		operand.flags = OP_INTLIT;
 		operand.size = force_size;
 		parser->pos++;

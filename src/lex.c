@@ -47,7 +47,7 @@ int scan_ident(lexer_t *lexer, token_t *token) {
 
 	token->ident_value[0] = lexer->character; //we already know the first one is an ident
 
-	while(isalpha(lexer->character) || isdigit(lexer->character) || lexer->character == '_') {
+	while(isalpha(lexer->character) || isdigit(lexer->character) || lexer->character == '_' || lexer->character == '\\') {
 		if(index > MAX_IDENT_LENGTH - 1) {
 			token->ident_value[index] = 0;
 			printf("Indentifier %s on line %ld is over %d characters\n", token->ident_value, lexer->line_num, MAX_IDENT_LENGTH);
@@ -296,7 +296,7 @@ token_t scan(lexer_t *lexer) {
 				token.token = T_INTLIT;
 				break;
 			}
-			if(isalpha(lexer->character) || lexer->character == '_') {
+			if(isalpha(lexer->character) || lexer->character == '_' || lexer->character == '\\') {
 				scan_ident(lexer, &token);
 				token.token = T_IDENT;
 				break;

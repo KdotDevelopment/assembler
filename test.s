@@ -83,7 +83,7 @@ section .text
     mov rdi, 'O'
     call _print
     mov r8, rax
-    mov rdi, 10
+    mov rdi, '\n'
     call _print
     mov r8, rax
     mov rax, 1
